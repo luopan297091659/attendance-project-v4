@@ -1,0 +1,23 @@
+﻿# 服务器操作步骤（SSH 连接后执行）
+
+# 1. 确认前端文件位置
+ls -lh /home/church/dist/index.html
+
+# 2. 修改 systemd 服务配置
+sudo nano /etc/systemd/system/attendance-server.service
+
+# 在 [Service] 部分添加：
+# Environment="FRONTEND_DIR=/home/church/dist"
+
+# 3. 或者直接在 .env 文件中配置
+echo "FRONTEND_DIR=/home/church/dist" | sudo tee -a /home/church/server/.env
+
+# 4. 重新加载并重启服务
+sudo systemctl daemon-reload
+sudo systemctl restart attendance-server
+
+# 5. 检查服务状态
+sudo systemctl status attendance-server
+
+# 6. 查看日志确认静态托管已启用
+sudo journalctl -u attendance-server -n 20 --no-pager
