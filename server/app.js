@@ -533,6 +533,47 @@ app.post('/api/admin/churches', auth, async (req, res) => {
   }
 });
 
+// 修改教会名称（仅教会所有者）
+app.put('/api/admin/churches/:churchId', auth, async (req, res) => {
+  try {
+    const { churchId } = req.params;
+    const { name } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).send({ msg:'name required' });
+    }
+
+    // 超级管理员或教会所有者可修改
+    const [adminRows] = await db.query('SELECT is_super FROM admins WHERE id = ?', [req.user.id]);
+    const isSuper = adminRows.length ? !!adminRows[0].is_super : false;
+
+    if (!isSuper) {
+      const [permission] = await db.query(`
+        SELECT id FROM church_admins 
+        WHERE admin_id = ? AND church_id = ? AND role = 'owner'
+      `, [req.user.id, churchId]);
+
+      if (!permission.length) {
+        return res.status(403).send({ msg:'only owner can edit church' });
+      }
+    }
+
+    const [result] = await db.query(
+      'UPDATE companies SET name=? WHERE id=?',
+      [name.trim(), churchId]
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).send({ msg:'church not found' });
+    }
+
+    res.send({ success: true, churchId, name: name.trim() });
+  } catch (err) {
+    console.error('Update church error:', err && err.stack ? err.stack : err);
+    res.status(500).send({ msg:'update failed', error: err && err.message ? err.message : 'unknown' });
+  }
+});
+
 // 为教会分配管理员
 app.post('/api/admin/churches/:churchId/admins', auth, async (req, res) => {
   try {

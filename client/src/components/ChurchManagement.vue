@@ -31,6 +31,11 @@
           <el-tag type="success">{{ row.memberCount || 0 }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="操作" width="140" align="center">
+        <template #default="{ row }">
+          <el-button size="small" @click="openEditDialog(row)">修改名称</el-button>
+        </template>
+      </el-table-column>
     </el-table>
 
     <!-- 创建教会对话框 -->
@@ -61,6 +66,23 @@
         <el-button type="primary" @click="createChurch" :loading="creating">创建</el-button>
       </template>
     </el-dialog>
+
+    <!-- 修改教会名称对话框 -->
+    <el-dialog v-model="showEditDialog" title="修改教会名称" width="500px" align-center>
+      <el-form :model="editChurch" label-width="100px" :rules="editRules" ref="editFormRef">
+        <el-form-item label="教会名称" prop="name">
+          <el-input
+            v-model="editChurch.name"
+            placeholder="请输入新的教会名称"
+            clearable
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showEditDialog = false">取消</el-button>
+        <el-button type="primary" @click="updateChurch" :loading="updating">保存</el-button>
+      </template>
+    </el-dialog>
   </el-card>
 </template>
 
@@ -71,11 +93,15 @@ import { ElMessage } from 'element-plus'
 
 const churches = ref([])
 const showCreateDialog = ref(false)
+const showEditDialog = ref(false)
 const creating = ref(false)
+const updating = ref(false)
 const loading = ref(false)
 
 const newChurch = ref({ name: '', code: '' })
 const createFormRef = ref(null)
+const editChurch = ref({ id: null, name: '' })
+const editFormRef = ref(null)
 
 // 表单验证规则
 const createRules = {
@@ -85,6 +111,12 @@ const createRules = {
   code: [
     { required: true, message: '请输入教会代码', trigger: 'blur' },
     { pattern: /^[a-zA-Z0-9_-]+$/, message: '代码只能包含字母、数字、下划线和短横线', trigger: 'blur' }
+  ]
+}
+
+const editRules = {
+  name: [
+    { required: true, message: '请输入教会名称', trigger: 'blur' }
   ]
 }
 
@@ -147,6 +179,44 @@ const createChurch = async () => {
     ElMessage.error(e.response?.data?.msg || '创建失败')
   } finally {
     creating.value = false
+  }
+}
+
+// 打开编辑对话框
+const openEditDialog = (row) => {
+  editChurch.value = { id: row.id, name: row.name }
+  showEditDialog.value = true
+}
+
+// 更新教会名称
+const updateChurch = async () => {
+  try {
+    if (!editChurch.value.name || !editChurch.value.name.trim()) {
+      ElMessage.error('教会名称不能为空')
+      return
+    }
+
+    updating.value = true
+    await api.put(`/api/admin/churches/${editChurch.value.id}`, {
+      name: editChurch.value.name
+    })
+
+    ElMessage.success('教会名称已更新')
+    showEditDialog.value = false
+    editChurch.value = { id: null, name: '' }
+    loadChurches()
+  } catch (e) {
+    if (e.response?.status === 403) {
+      ElMessage.error('无权限修改该教会')
+    } else if (e.response?.status === 404) {
+      ElMessage.error('教会不存在或已被删除')
+    } else {
+      const serverMsg = e.response?.data?.msg
+      const serverErr = e.response?.data?.error
+      ElMessage.error(serverErr ? `${serverMsg || '更新失败'}：${serverErr}` : (serverMsg || '更新失败'))
+    }
+  } finally {
+    updating.value = false
   }
 }
 
