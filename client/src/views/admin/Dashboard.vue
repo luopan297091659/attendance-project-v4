@@ -31,6 +31,10 @@
             <span class="icon-emoji">📱</span>
             <span>签到二维码</span>
           </el-button>
+          <el-button @click="changePasswordVisible = true" class="icon-btn">
+            <span class="icon-emoji">🔑</span>
+            <span>修改密码</span>
+          </el-button>
           <el-button @click="logout" class="icon-btn">
             <span class="icon-emoji">🚪</span>
             <span>退出登录</span>
@@ -66,6 +70,40 @@
           </el-button>
         </div>
       </div>
+    </el-dialog>
+
+    <!-- 修改密码对话框 -->
+    <el-dialog v-model="changePasswordVisible" title="🔑 修改密码" width="450px" align-center>
+      <el-form :model="passwordForm" label-width="100px" @submit.prevent="submitChangePassword">
+        <el-form-item label="旧密码" required>
+          <el-input 
+            v-model="passwordForm.oldPassword" 
+            type="password" 
+            placeholder="请输入当前密码"
+            show-password
+          />
+        </el-form-item>
+        <el-form-item label="新密码" required>
+          <el-input 
+            v-model="passwordForm.newPassword" 
+            type="password" 
+            placeholder="请输入新密码（至少6位）"
+            show-password
+          />
+        </el-form-item>
+        <el-form-item label="确认密码" required>
+          <el-input 
+            v-model="passwordForm.confirmPassword" 
+            type="password" 
+            placeholder="请再次输入新密码"
+            show-password
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="changePasswordVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitChangePassword" :loading="passwordChanging">确认修改</el-button>
+      </template>
     </el-dialog>
 
     <!-- 选项卡 -->
@@ -152,7 +190,7 @@
         <template #label>
           <span class="tab-label"><span class="icon-emoji">👥</span> 人员管理</span>
         </template>
-        <employee-list />
+        <employee-list ref="employeeListRef" />
       </el-tab-pane>
 
       <!-- 教会管理仅超级管理员可见 -->
@@ -182,6 +220,7 @@ const router = useRouter()
 
 const activeTab = ref('today')
 const loading = ref(false)
+const employeeListRef = ref(null)
 
 const signed = ref([])
 const absent = ref([])
@@ -189,6 +228,14 @@ const total = ref(0)
 const todaySigned = ref(0)
 const trendData = ref({ days: [], series: [] })
 const selectedDate = ref(new Date())
+
+const changePasswordVisible = ref(false)
+const passwordChanging = ref(false)
+const passwordForm = ref({
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
 
 const churches = ref([])
 const currentChurchId = ref(null)
@@ -244,6 +291,58 @@ const logout = async () => {
   }
 }
 
+// 提交修改密码
+const submitChangePassword = async () => {
+  // 验证输入
+  if (!passwordForm.value.oldPassword) {
+    ElMessage.error('请输入旧密码')
+    return
+  }
+  if (!passwordForm.value.newPassword) {
+    ElMessage.error('请输入新密码')
+    return
+  }
+  if (passwordForm.value.newPassword.length < 6) {
+    ElMessage.error('新密码至少需要6位')
+    return
+  }
+  if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+    ElMessage.error('两次输入的新密码不一致')
+    return
+  }
+  if (passwordForm.value.oldPassword === passwordForm.value.newPassword) {
+    ElMessage.error('新密码不能与旧密码相同')
+    return
+  }
+
+  try {
+    passwordChanging.value = true
+    await api.post('/api/admin/change-password', {
+      oldPassword: passwordForm.value.oldPassword,
+      newPassword: passwordForm.value.newPassword
+    })
+    ElMessage.success('密码修改成功，请重新登录')
+    changePasswordVisible.value = false
+    passwordForm.value = {
+      oldPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    }
+    // 跳转到登录页
+    setTimeout(() => {
+      localStorage.removeItem('token')
+      localStorage.removeItem('companyId')
+      localStorage.removeItem('adminId')
+      localStorage.removeItem('churches')
+      router.push('/admin/login')
+    }, 1000)
+  } catch (e) {
+    ElMessage.error(e.response?.data?.msg || '密码修改失败')
+  } finally {
+    passwordChanging.value = false
+  }
+}
+
 // 加载教会列表
 const loadChurches = async () => {
   try {
@@ -273,6 +372,10 @@ const switchChurch = async () => {
       ElMessage.success(`已切换到 ${church.name}`)
       // 重新加载数据
       await loadStats()
+      // 刷新人员列表
+      if (employeeListRef.value && employeeListRef.value.fetch) {
+        await employeeListRef.value.fetch()
+      }
     }
   } catch (e) {
     ElMessage.error('切换失败')

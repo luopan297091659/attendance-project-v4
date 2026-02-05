@@ -47,7 +47,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import api from '../api'
 import EmployeeForm from './EmployeeForm.vue'
 import { ElMessage } from 'element-plus'
@@ -59,6 +59,7 @@ const formModel = ref(null)
 const query = ref('')
 const page = ref(1)
 const pageSize = ref(10)
+const loading = ref(false)
 
 const filtered = computed(() =>
   employees.value.filter(e =>
@@ -71,6 +72,7 @@ const pagedData = computed(() =>
 )
 
 const fetch = async () => {
+  loading.value = true
   try {
     const { data } = await api.get('/api/admin/employees')
     if (Array.isArray(data)) {
@@ -83,6 +85,8 @@ const fetch = async () => {
   } catch (e) {
     console.error(e)
     ElMessage.error('加载员工列表失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -130,6 +134,11 @@ const exportExcel = async () => {
     console.error('Excel export error:', e)
   }
 }
+
+// 导出fetch方法供父组件使用
+defineExpose({
+  fetch
+})
 
 onMounted(fetch)
 </script>

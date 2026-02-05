@@ -449,6 +449,51 @@ app.post('/api/admin/switch-church', auth, async (req, res) => {
   }
 });
 
+// 修改管理员密码
+app.post('/api/admin/change-password', auth, async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const { oldPassword, newPassword } = req.body;
+
+    // 验证输入
+    if (!oldPassword || !newPassword) {
+      return res.status(400).send({ msg:'missing password' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).send({ msg:'password too short' });
+    }
+
+    // 获取当前管理员信息
+    const [rows] = await db.query('SELECT * FROM admins WHERE id=?', [adminId]);
+    
+    if (!rows.length) {
+      return res.status(404).send({ msg:'admin not found' });
+    }
+
+    const admin = rows[0];
+
+    // 验证旧密码
+    if (!admin.password || !bcrypt.compareSync(oldPassword, admin.password)) {
+      return res.status(401).send({ msg:'wrong old password' });
+    }
+
+    // 检查新密码是否与旧密码相同
+    if (bcrypt.compareSync(newPassword, admin.password)) {
+      return res.status(400).send({ msg:'new password same as old' });
+    }
+
+    // 加密新密码并更新
+    const hashedPassword = bcrypt.hashSync(newPassword, 10);
+    await db.query('UPDATE admins SET password=? WHERE id=?', [hashedPassword, adminId]);
+
+    res.send({ success: true, msg: 'password changed successfully' });
+  } catch (err) {
+    console.error('Change password error:', err.message);
+    res.status(500).send({ msg:'change password failed' });
+  }
+});
+
 // 创建新教会（仅超级管理员）
 app.post('/api/admin/churches', auth, async (req, res) => {
   try {

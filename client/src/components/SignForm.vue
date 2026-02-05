@@ -1,6 +1,6 @@
 <template>
   <el-card class="box">
-    <h2>{{ companyName ? companyName + ' - 签到' : '扫码签到' }}</h2>
+    <!-- h2标题已隐藏 -->
 
     <!-- 公司选择：允许切换公司或从链接自动预选 -->
     <div class="company-select-row">
@@ -244,6 +244,8 @@ const onSubmit = () => {
   max-width: 500px;
   margin: 40px auto;
   padding: 20px;
+  border-radius: 8px;
+  box-sizing: border-box;
 }
 
 h2 {
@@ -265,6 +267,7 @@ h2 {
   margin-bottom: 8px;
   font-weight: 500;
   color: #333;
+  word-break: break-word;
 }
 
 .input-field {
@@ -273,8 +276,10 @@ h2 {
   border: 1px solid #dcdfe6;
   border-radius: 4px;
   font-size: 14px;
-  transition: border-color 0.3s;
+  transition: border-color 0.3s, box-shadow 0.3s;
   box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .input-field:focus {
@@ -301,6 +306,10 @@ h2 {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  box-sizing: border-box;
+  font-weight: 500;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .submit-btn:hover:not(:disabled) {
@@ -310,6 +319,10 @@ h2 {
 .submit-btn:disabled {
   background-color: #a8abb2;
   cursor: not-allowed;
+}
+
+.submit-btn:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .status-light {
@@ -367,6 +380,7 @@ h2 {
 .refresh-btn {
   color: #409eff;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .tip {
@@ -376,51 +390,91 @@ h2 {
   margin-top: 12px;
   height: 16px;
   min-height: 16px;
+  word-wrap: break-word;
+  padding: 0 8px;
 }
 
-@media (max-width: 768px) {
+/* 超大屏幕 (1200px及以上) */
+@media (min-width: 1200px) {
   .box {
+    max-width: 600px;
+    margin: 60px auto;
+    padding: 30px;
+  }
+
+  .form-group {
+    margin-bottom: 24px;
+  }
+
+  .input-field {
+    padding: 12px 14px;
+    font-size: 15px;
+  }
+
+  .submit-btn {
+    padding: 14px;
+    font-size: 17px;
+  }
+}
+
+/* 大屏幕 (768px - 1199px) */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .box {
+    max-width: 480px;
+    margin: 30px auto;
+    padding: 20px;
+  }
+
+  .company-select {
+    min-width: 200px;
+    max-width: 380px;
+  }
+}
+
+/* 平板竖屏 (481px - 767px) */
+@media (min-width: 481px) and (max-width: 767px) {
+  .box {
+    max-width: 95vw;
+    margin: 20px auto;
+    padding: 16px;
     border-radius: 8px;
   }
 
   .box h2 {
     font-size: 18px;
-    text-align: center;
     margin: 0 0 16px 0;
   }
 
   .company-select-row {
-    gap: 8px;
+    gap: 10px;
     margin-bottom: 12px;
   }
 
   .company-select {
-    min-width: 140px;
+    min-width: 120px;
     max-width: 100%;
     flex: 1;
   }
 
-  .form-content {
-    gap: 12px;
-  }
-
   .form-group {
-    gap: 6px;
+    margin-bottom: 16px;
   }
 
   .form-group label {
-    font-size: 14px;
+    font-size: 15px;
+    margin-bottom: 6px;
   }
 
   .input-field {
-    padding: 8px 12px;
+    padding: 9px 11px;
     font-size: 16px;
+    border-radius: 4px;
   }
 
   .submit-btn {
-    padding: 10px 16px;
-    font-size: 16px;
-    border-radius: 6px;
+    padding: 11px 14px;
+    font-size: 15px;
+    border-radius: 4px;
   }
 
   .status-light {
@@ -429,60 +483,110 @@ h2 {
   }
 
   .tip {
-    font-size: 11px;
+    font-size: 12px;
+    margin-top: 10px;
+  }
+
+  .refresh-btn {
+    font-size: 13px;
   }
 }
 
+/* 手机设备 (max-width: 480px) */
 @media (max-width: 480px) {
+  /* 防止iOS缩放 */
+  input,
+  button,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
   .box {
-    border-radius: 0;
+    max-width: 100vw;
+    width: 100%;
+    margin: 0 auto;
     padding: 12px;
+    border-radius: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
   .box h2 {
     font-size: 16px;
     margin: 0 0 12px 0;
+    padding: 0;
   }
 
   .company-select-row {
     gap: 6px;
     margin-bottom: 12px;
+    padding: 0;
   }
 
   .company-select {
-    min-width: 100px;
+    min-width: unset;
     max-width: 100%;
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  :deep(.el-select) {
+    width: 100%;
   }
 
   .refresh-btn {
     padding: 6px 8px;
     font-size: 12px;
+    flex-shrink: 1;
   }
 
   .form-content {
-    gap: 10px;
+    margin: 12px 0;
+    width: 100%;
   }
 
   .form-group {
-    gap: 4px;
+    margin-bottom: 12px;
+    width: 100%;
   }
 
   .form-group label {
     font-size: 13px;
+    margin-bottom: 4px;
+    font-weight: 600;
+    color: #333;
   }
 
   .input-field {
-    padding: 6px 10px;
+    padding: 8px 10px;
     font-size: 16px;
     border-radius: 4px;
+    border-width: 1px;
+    height: 44px;
+    line-height: 1.2;
+  }
+
+  .input-field:focus {
+    border-color: #409eff;
+    background-color: #f5f7fa;
   }
 
   .submit-btn {
-    padding: 8px 12px;
-    font-size: 14px;
+    padding: 10px 12px;
+    font-size: 15px;
     border-radius: 4px;
     width: 100%;
-    gap: 4px;
+    gap: 6px;
+    height: 44px;
+    margin-top: 8px;
+    font-weight: 600;
+  }
+
+  .submit-btn:active:not(:disabled) {
+    background-color: #398ade;
   }
 
   .status-light {
@@ -491,8 +595,116 @@ h2 {
   }
 
   .tip {
-    font-size: 10px;
+    font-size: 11px;
     margin-top: 8px;
+    padding: 0 4px;
+    line-height: 1.4;
+  }
+
+  /* 超小手机 (max-width: 360px) */
+  @media (max-width: 360px) {
+    .box {
+      padding: 10px;
+      min-height: auto;
+    }
+
+    .box h2 {
+      font-size: 15px;
+      margin: 0 0 10px 0;
+    }
+
+    .company-select-row {
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 10px;
+    }
+
+    .form-group label {
+      font-size: 12px;
+      margin-bottom: 3px;
+    }
+
+    .input-field {
+      padding: 6px 8px;
+      font-size: 15px;
+      height: 40px;
+    }
+
+    .submit-btn {
+      padding: 8px 10px;
+      font-size: 14px;
+      height: 40px;
+      margin-top: 6px;
+    }
+
+    .tip {
+      font-size: 10px;
+      margin-top: 6px;
+    }
+  }
+}
+
+/* 横屏手机 (高度限制) */
+@media (max-height: 500px) and (max-width: 767px) {
+  .box {
+    min-height: auto;
+    margin: 10px auto;
+    padding: 10px;
+  }
+
+  .box h2 {
+    margin: 0 0 8px 0;
+  }
+
+  .form-group {
+    margin-bottom: 10px;
+  }
+
+  .form-group label {
+    margin-bottom: 2px;
+    font-size: 12px;
+  }
+
+  .input-field {
+    padding: 6px 8px;
+    font-size: 14px;
+    height: 36px;
+  }
+
+  .submit-btn {
+    padding: 6px 10px;
+    font-size: 14px;
+    height: 36px;
+  }
+
+  .tip {
+    margin-top: 4px;
+    font-size: 10px;
+  }
+}
+
+/* iOS Safari 特定优化 */
+@supports (-webkit-touch-callout: none) {
+  .input-field {
+    font-size: 16px;
+  }
+
+  .submit-btn {
+    font-size: 16px;
+  }
+
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .input-field,
+  .submit-btn {
+    -webkit-user-select: text;
+    user-select: text;
   }
 }
 </style>

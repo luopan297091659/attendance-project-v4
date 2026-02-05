@@ -1,0 +1,602 @@
+/* 全局响应式样式文件 */
+
+/* 根元素 */
+:root {
+  /* 颜色变量 */
+  --primary-color: #409eff;
+  --success-color: #67c23a;
+  --warning-color: #e6a23c;
+  --danger-color: #f56c6c;
+  --error-color: #f56c6c;
+  --info-color: #909399;
+  
+  /* 间距 */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-xxl: 24px;
+  
+  /* 圆角 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  
+  /* 阴影 */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 2px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* 重置基础样式 */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 
+              'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  color: #303133;
+  background-color: #f5f7fa;
+  line-height: 1.5;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 禁用缩放，优化移动体验 */
+button, a, input, select, textarea {
+  touch-action: manipulation;
+}
+
+button:not(:disabled),
+a[href],
+input[type='submit'],
+input[type='button'],
+input[type='radio'],
+input[type='checkbox'],
+[role='button'],
+[role='link'] {
+  cursor: pointer;
+}
+
+/* 文本选择优化 */
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='number'],
+input[type='tel'],
+input[type='url'],
+input[type='search'],
+textarea,
+select {
+  font-family: inherit;
+  font-size: 16px;
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: var(--radius-md);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+input[type='text']:focus,
+input[type='email']:focus,
+input[type='password']:focus,
+input[type='number']:focus,
+input[type='tel']:focus,
+input[type='url']:focus,
+input[type='search']:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+}
+
+/* 移除iOS默认样式 */
+input[type='submit'],
+input[type='button'],
+button {
+  -webkit-appearance: none;
+  appearance: none;
+  border: none;
+  font-family: inherit;
+}
+
+/* 禁用长按菜单 */
+a, button, input, textarea {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input[type='text'],
+input[type='password'],
+input[type='email'],
+input[type='number'],
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* 防止iOS双击缩放 */
+button,
+a,
+input[type='submit'],
+input[type='button'] {
+  touch-action: manipulation;
+}
+
+/* 链接样式 */
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+a:hover {
+  color: #66b1ff;
+}
+
+a:active {
+  color: #0a66cc;
+}
+
+/* 响应式设计断点 */
+/* 大屏幕 (1200px+) */
+@media (min-width: 1200px) {
+  html, body {
+    background-color: #fafafa;
+  }
+  
+  body {
+    font-size: 14px;
+  }
+}
+
+/* 中屏幕 (768px - 1199px) */
+@media (min-width: 768px) and (max-width: 1199px) {
+  body {
+    font-size: 14px;
+  }
+}
+
+/* 平板和大型手机 (481px - 767px) */
+@media (min-width: 481px) and (max-width: 767px) {
+  body {
+    font-size: 13px;
+  }
+}
+
+/* 手机 (max-width: 480px) */
+@media (max-width: 480px) {
+  html, body, #app {
+    /* 确保100%高度包括虚拟键盘 */
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  body {
+    font-size: 13px;
+    background-color: #ffffff;
+    padding: 0;
+    margin: 0;
+  }
+
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  input[type='number'],
+  input[type='tel'],
+  input[type='url'],
+  input[type='search'],
+  textarea,
+  select {
+    font-size: 16px; /* 防止iOS自动放大 */
+  }
+
+  /* 触摸友好的目标尺寸 */
+  button,
+  a,
+  input[type='submit'],
+  input[type='button'],
+  input[type='radio'],
+  input[type='checkbox'] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  input[type='text'],
+  input[type='password'],
+  input[type='email'],
+  input[type='number'],
+  textarea,
+  select {
+    min-height: 44px;
+  }
+}
+
+/* 小型手机 (max-width: 360px) */
+@media (max-width: 360px) {
+  body {
+    font-size: 12px;
+  }
+
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  input[type='number'],
+  textarea,
+  select {
+    font-size: 16px;
+    line-height: 1.4;
+  }
+}
+
+/* 横屏和高度受限的屏幕 */
+@media (max-height: 500px) {
+  body {
+    overflow-y: auto;
+  }
+
+  #app {
+    min-height: 100vh;
+  }
+
+  /* 减少垂直间距 */
+  input[type='text'],
+  input[type='password'],
+  input[type='email'],
+  input[type='number'],
+  textarea,
+  select {
+    min-height: 40px;
+  }
+
+  button,
+  a,
+  input[type='submit'],
+  input[type='button'] {
+    min-height: 40px;
+  }
+}
+
+/* iOS Safari 特定优化 */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific fixes */
+  html, body, #app {
+    width: 100%;
+    height: 100%;
+    height: 100dvh; /* 使用dynamic viewport height */
+    position: fixed;
+    overflow: hidden;
+  }
+
+  body {
+    position: fixed;
+    width: 100%;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  #app {
+    position: fixed;
+    width: 100%;
+    height: 100dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* 启用惯性滚动 */
+  }
+
+  input[type='text'],
+  input[type='password'],
+  input[type='email'],
+  input[type='number'],
+  textarea,
+  select {
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 8px;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.2);
+  }
+
+  /* 防止iOS Safari自动缩放 */
+  input[type='submit'],
+  input[type='button'],
+  button {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* 固定键盘问题 */
+  input[type='text'],
+  input[type='password'],
+  input[type='email'],
+  input[type='number'],
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Android 特定优化 */
+@supports (-webkit-app-region: drag) {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  input[type='text'],
+  input[type='password'],
+  input[type='email'],
+  input[type='number'],
+  textarea,
+  select {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+/* 打印样式 */
+@media print {
+  body {
+    background-color: white;
+  }
+
+  #app {
+    padding: 0;
+  }
+}
+
+/* Element Plus 组件响应式优化 */
+:deep(.el-container) {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+:deep(.el-main) {
+  flex: 1;
+  padding: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+:deep(.el-header) {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--spacing-lg);
+  height: auto;
+  min-height: 60px;
+  background-color: white;
+  border-bottom: 1px solid #ebeef5;
+}
+
+@media (max-width: 768px) {
+  :deep(.el-header) {
+    min-height: 50px;
+    padding: 0 var(--spacing-md);
+  }
+}
+
+@media (max-width: 480px) {
+  :deep(.el-header) {
+    min-height: 44px;
+    padding: 0 var(--spacing-sm);
+  }
+}
+
+/* Element Plus Button 响应式 */
+:deep(.el-button) {
+  min-height: 32px;
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 480px) {
+  :deep(.el-button) {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  :deep(.el-button--small) {
+    min-height: 40px;
+  }
+
+  :deep(.el-button--mini) {
+    min-height: 32px;
+  }
+}
+
+/* Element Plus Input 响应式 */
+:deep(.el-input__inner),
+:deep(.el-input__wrapper) {
+  font-size: 14px;
+  min-height: 32px;
+}
+
+@media (max-width: 480px) {
+  :deep(.el-input__inner),
+  :deep(.el-input__wrapper) {
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  :deep(.el-input.is-large .el-input__inner),
+  :deep(.el-input.is-large .el-input__wrapper) {
+    min-height: 44px;
+  }
+}
+
+/* Element Plus Dialog 响应式 */
+:deep(.el-dialog) {
+  border-radius: var(--radius-lg);
+}
+
+@media (max-width: 768px) {
+  :deep(.el-dialog) {
+    width: 90% !important;
+    margin: 0 auto !important;
+  }
+}
+
+@media (max-width: 480px) {
+  :deep(.el-dialog) {
+    width: 95% !important;
+    margin: 0 auto !important;
+    border-radius: var(--radius-md);
+  }
+
+  :deep(.el-dialog__header) {
+    padding: var(--spacing-md);
+  }
+
+  :deep(.el-dialog__body) {
+    padding: var(--spacing-md);
+  }
+
+  :deep(.el-dialog__footer) {
+    padding: var(--spacing-md);
+  }
+}
+
+/* Element Plus Form 响应式 */
+:deep(.el-form) {
+  width: 100%;
+}
+
+@media (max-width: 480px) {
+  :deep(.el-form-item) {
+    margin-bottom: var(--spacing-lg);
+  }
+
+  :deep(.el-form-item__label) {
+    font-size: 13px;
+  }
+
+  :deep(.el-form-item__error) {
+    font-size: 12px;
+  }
+}
+
+/* Element Plus Table 响应式 */
+:deep(.el-table) {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  :deep(.el-table) {
+    font-size: 12px;
+  }
+
+  :deep(.el-table__header th) {
+    padding: 8px 4px;
+  }
+
+  :deep(.el-table__body td) {
+    padding: 8px 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  :deep(.el-table) {
+    font-size: 11px;
+  }
+
+  :deep(.el-table__header th) {
+    padding: 6px 2px;
+  }
+
+  :deep(.el-table__body td) {
+    padding: 6px 2px;
+  }
+}
+
+/* Element Plus Pagination 响应式 */
+:deep(.el-pagination) {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) 0;
+}
+
+@media (max-width: 480px) {
+  :deep(.el-pagination) {
+    font-size: 12px;
+    gap: var(--spacing-xs);
+  }
+
+  :deep(.el-pagination .btn-prev),
+  :deep(.el-pagination .btn-next),
+  :deep(.el-pagination .el-pager li) {
+    min-width: 28px;
+    min-height: 28px;
+    line-height: 28px;
+  }
+}
+
+/* Element Plus Select 响应式 */
+:deep(.el-select) {
+  width: 100%;
+}
+
+@media (max-width: 480px) {
+  :deep(.el-select .el-input__inner),
+  :deep(.el-select .el-input__wrapper) {
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  :deep(.el-dropdown-menu) {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* 火狐浏览器滚动条 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #888 #f1f1f1;
+}

@@ -64,16 +64,17 @@
             <el-link type="primary" @click="goToPublic" :underline="false">
               📱 前往公共签到页面
             </el-link>
-            <el-divider direction="vertical" />
+            <!-- API配置功能暂不开放 -->
+            <!-- <el-divider direction="vertical" />
             <el-link type="primary" @click="showApiConfig = true" :underline="false">
               ⚙️ API 配置
-            </el-link>
+            </el-link> -->
           </div>
         </div>
       </el-card>
 
-      <!-- API 配置弹窗 -->
-      <el-dialog 
+      <!-- API 配置弹窗 - 暂不开放 -->
+      <!-- <el-dialog 
         v-model="showApiConfig" 
         title="API 服务器配置" 
         width="500px"
@@ -103,7 +104,7 @@
             <el-button @click="showApiConfig = false">取消</el-button>
           </el-space>
         </template>
-      </el-dialog>
+      </el-dialog> -->
     </div>
   </div>
 </template>
@@ -372,14 +373,25 @@ const goToPublic = () => {
   line-height: 1.6;
 }
 
-/* 响应式设计 */
+/* 响应式设计 - 平板 */
 @media (max-width: 768px) {
   .login-page {
     padding: 10px;
+    min-height: 100vh;
+  }
+
+  .login-card {
+    padding: 30px 24px;
+    border-radius: 8px;
+  }
+
+  .login-header {
+    margin-bottom: 24px;
   }
 
   .login-title {
-    font-size: 24px;
+    font-size: 26px;
+    margin: 0 0 10px;
   }
 
   .login-subtitle {
@@ -387,83 +399,256 @@ const goToPublic = () => {
   }
 
   .logo-circle {
-    width: 60px;
-    height: 60px;
+    width: 70px;
+    height: 70px;
+    margin: 0 auto 16px;
   }
 
   .logo-icon {
-    font-size: 30px;
+    font-size: 32px;
   }
 
-  .login-card {
-    border-radius: 8px;
+  .login-form {
+    margin-top: 24px;
   }
 
-  .login-form :deep(.el-input__wrapper) {
-    padding: 6px 8px;
+  .login-form :deep(.el-form-item) {
+    margin-bottom: 16px;
   }
 
-  .login-form :deep(.el-button) {
-    width: 100%;
+  .login-button-item {
+    margin-top: 20px;
+  }
+
+  .input-icon {
+    font-size: 16px;
+    margin-right: 6px;
+  }
+
+  .divider-text {
+    font-size: 13px;
+  }
+
+  .footer-links .el-link {
+    font-size: 13px;
   }
 }
 
+/* 响应式设计 - 手机 */
 @media (max-width: 480px) {
-  .login-container {
+  .login-page {
     padding: 0;
+    justify-content: flex-start;
+    padding-top: 10vh;
+  }
+
+  .login-container {
+    margin: 0 auto;
+    max-width: 100%;
+    width: 100%;
   }
 
   .login-card {
     border-radius: 0;
-    box-shadow: none;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    padding: 24px 16px;
+    margin: 0;
   }
 
   .login-header {
-    padding: 16px 0;
+    padding: 12px 0;
+    margin-bottom: 20px;
+  }
+
+  .logo-circle {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 12px;
+  }
+
+  .logo-icon {
+    font-size: 28px;
   }
 
   .login-title {
-    font-size: 20px;
-    margin: 8px 0;
+    font-size: 22px;
+    margin: 0 0 8px;
   }
 
   .login-subtitle {
     font-size: 12px;
-    margin-bottom: 12px;
-  }
-
-  .logo-circle {
-    width: 50px;
-    height: 50px;
-  }
-
-  .logo-icon {
-    font-size: 24px;
+    margin: 0;
   }
 
   .login-form {
-    margin: 16px 0;
+    margin-top: 20px;
   }
 
   .login-form :deep(.el-form-item) {
     margin-bottom: 12px;
   }
 
+  .login-form :deep(.el-input__wrapper) {
+    padding: 6px 8px;
+  }
+
+  .login-form :deep(.el-input__inner) {
+    min-height: 44px;
+    font-size: 16px;
+    padding-left: 40px;
+  }
+
+  .input-icon {
+    font-size: 16px;
+    margin-right: 6px;
+  }
+
+  .login-button-item {
+    margin-top: 18px;
+    margin-bottom: 0;
+  }
+
+  .login-button {
+    height: 44px;
+    font-size: 15px;
+    border-radius: 22px;
+  }
+
   .login-footer {
-    margin-top: 12px;
+    margin-top: 16px;
+  }
+
+  .divider {
+    margin: 16px 0;
+  }
+
+  .divider-text {
+    font-size: 12px;
+    padding: 0 8px;
+  }
+
+  .footer-links .el-link {
+    font-size: 13px;
   }
 
   .login-tips {
-    padding: 8px 10px;
+    padding: 10px 12px;
+    margin-top: 16px;
     font-size: 12px;
   }
 
   .tip-text {
     font-size: 11px;
+    margin: 0;
+  }
+}
+
+/* 小型手机 */
+@media (max-width: 360px) {
+  .login-card {
+    padding: 20px 12px;
   }
 
-  .divider-text {
-    font-size: 12px;
+  .login-title {
+    font-size: 20px;
+  }
+
+  .login-subtitle {
+    font-size: 11px;
+  }
+
+  .logo-circle {
+    width: 55px;
+    height: 55px;
+  }
+
+  .logo-icon {
+    font-size: 26px;
+  }
+
+  .login-form :deep(.el-input__inner) {
+    min-height: 42px;
+    font-size: 16px;
+  }
+
+  .input-icon {
+    font-size: 14px;
+  }
+}
+
+/* iOS Safari 特定优化 */
+@supports (-webkit-touch-callout: none) {
+  .login-page {
+    position: fixed;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px 0;
+  }
+
+  .login-form :deep(.el-input__inner) {
+    font-size: 16px;
+  }
+
+  .login-button {
+    -webkit-appearance: none;
+    appearance: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* 横屏模式优化 */
+@media (max-height: 500px) {
+  .login-page {
+    padding: 10px;
+    justify-content: center;
+  }
+
+  .login-card {
+    padding: 20px 16px;
+  }
+
+  .login-title {
+    font-size: 18px;
+    margin: 0 0 6px;
+  }
+
+  .login-subtitle {
+    font-size: 11px;
+  }
+
+  .logo-circle {
+    width: 50px;
+    height: 50px;
+    margin: 0 auto 8px;
+  }
+
+  .logo-icon {
+    font-size: 22px;
+  }
+
+  .login-form {
+    margin-top: 12px;
+  }
+
+  .login-form :deep(.el-form-item) {
+    margin-bottom: 8px;
+  }
+
+  .login-button {
+    height: 40px;
+    font-size: 14px;
+  }
+
+  .login-footer {
+    margin-top: 8px;
+  }
+
+  .divider {
+    margin: 8px 0;
   }
 }
 
