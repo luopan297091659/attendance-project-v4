@@ -20,6 +20,9 @@
       <el-form-item label="住址">
         <el-input v-model="model.address" placeholder="请输入住址" type="textarea" :rows="2"/>
       </el-form-item>
+      <el-form-item label="备注">
+        <el-input v-model="model.remark" placeholder="请输入备注" type="textarea" :rows="2"/>
+      </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="save" :loading="loading">保存</el-button>
         <el-button @click="$emit('cancel')">取消</el-button>

@@ -4,7 +4,7 @@
       <el-card class="login-card" shadow="always">
         <div class="login-header">
           <div class="logo-circle">
-            <span class="logo-icon">🔐</span>
+            <img :src="churchLogo" alt="Church Logo" class="logo-image" />
           </div>
           <h2 class="login-title">管理员登录</h2>
           <p class="login-subtitle">欢迎回来，请登录您的账户</p>
@@ -114,6 +114,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import api, { setToken } from '../../api'
 import { ElMessage } from 'element-plus'
+import churchLogo from '../../assets/church-logo.png'
 
 const router = useRouter()
 const username = ref('')
@@ -246,29 +247,39 @@ const goToPublic = () => {
   width: 80px;
   height: 80px;
   margin: 0 auto 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3), inset 0 1px 3px rgba(255, 255, 255, 0.2);
   animation: pulse 2s ease-in-out infinite;
+  backdrop-filter: blur(8px);
 }
 
 @keyframes pulse {
   0%, 100% {
     transform: scale(1);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3), inset 0 1px 3px rgba(255, 255, 255, 0.2);
   }
   50% {
     transform: scale(1.05);
-    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5), inset 0 1px 3px rgba(255, 255, 255, 0.3);
   }
 }
 
 .logo-icon {
   font-size: 40px;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+.logo-image {
+  width: 72%;
+  height: 72%;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+  border-radius: 50%;
+  display: block;
 }
 
 .login-title {
@@ -408,6 +419,11 @@ const goToPublic = () => {
     font-size: 32px;
   }
 
+  .logo-image {
+    width: 70%;
+    height: 70%;
+  }
+
   .login-form {
     margin-top: 24px;
   }
@@ -468,6 +484,11 @@ const goToPublic = () => {
 
   .logo-icon {
     font-size: 28px;
+  }
+
+  .logo-image {
+    width: 70%;
+    height: 70%;
   }
 
   .login-title {
@@ -566,6 +587,11 @@ const goToPublic = () => {
     font-size: 26px;
   }
 
+  .logo-image {
+    width: 65%;
+    height: 65%;
+  }
+
   .login-form :deep(.el-input__inner) {
     min-height: 42px;
     font-size: 16px;
@@ -628,6 +654,11 @@ const goToPublic = () => {
 
   .logo-icon {
     font-size: 22px;
+  }
+
+  .logo-image {
+    width: 65%;
+    height: 65%;
   }
 
   .login-form {

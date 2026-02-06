@@ -84,6 +84,7 @@
       <div class="tip-text">
         <p>✓ 填写完整信息有助于统计与管理</p>
         <p>✓ 支持回车提交（在姓名或手机号输入框按 Enter）</p>
+        <p>✓ 同一手机号可登记多个人员（如一家人共用手机号）</p>
       </div>
     </el-card>
   </div>
@@ -138,8 +139,8 @@ const rules = {
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
     {
-    //   pattern: /^1[3-9]\d{9}$/,
-      pattern: /^(\+\d{1,4})?((1[3-9]\d{9})|(0?[7-9]\d{9})|([2-9]\d{7,14}))$/,
+      // 支持中国手机号（1开头，11位）和日本手机号（0开头，10-11位）
+      pattern: /^(1[3-9]\d{9}|0\d{9,10})$/,
       message: '手机号格式错误',
       trigger: 'blur'
     }
@@ -227,7 +228,15 @@ const submitForm = async () => {
 
   } catch (e) {
     if (e.response?.status === 400) {
-      ElMessage.error(e.response?.data?.msg || '登记失败：信息有误')
+      const msg = e.response?.data?.msg || '登记失败：信息有误'
+      // 优化错误提示信息
+      if (msg.includes('已被注册') || msg.includes('相同')) {
+        ElMessage.error('该员工已被登记过，请返回签到或重新输入信息')
+      } else if (msg.includes('手机号') || msg.includes('姓名')) {
+        ElMessage.error(msg)
+      } else {
+        ElMessage.error(msg)
+      }
     } else {
       ElMessage.error('登记失败，请重试')
     }

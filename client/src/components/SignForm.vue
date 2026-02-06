@@ -42,7 +42,33 @@
     </div>
 
     <div class="tip">{{ statusText }}</div>
+
+    <div class="footer-link">
+      <a href="https://adventist.jp/author/commu/" target="_blank" class="church-link">⛪ 大阪中心教会网页</a>
+    </div>
   </el-card>
+
+  <!-- 多人选择对话框 -->
+  <el-dialog 
+    v-model="showSelectDialog" 
+    title="请选择具体人员"
+    width="400px"
+    :close-on-click-modal="false"
+    :close-on-press-escape="false"
+  >
+    <p class="select-dialog-hint">该手机号对应多个员工，请选择要签到的人员：</p>
+    <div class="employee-list">
+      <button 
+        v-for="emp in multipleEmployees" 
+        :key="emp.id"
+        @click="selectEmployee(emp)"
+        class="employee-option"
+      >
+        <span class="emp-name">{{ emp.name }}</span>
+        <span class="emp-info">{{ emp.gender ? emp.gender + ' · ' : '' }}{{ emp.age ? emp.age + '岁' : '' }}</span>
+      </button>
+    </div>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -53,6 +79,9 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 const form = ref({ name: '', phone: '' })
 const loading = ref(false)
 const inputStatusVal = ref('empty')
+const showSelectDialog = ref(false)
+const multipleEmployees = ref([])
+const selectedPhoneForMultiple = ref('')
 // 支持两种参数格式：?company=xxx 或 ?code=xxx
 const urlParams = new URLSearchParams(location.search)
 const initialCompany = urlParams.get('company') || urlParams.get('code')
@@ -68,7 +97,7 @@ const updateStatus = () => {
   // 如果都输入了
   if (nameInputted && phoneInputted) {
     const nameOk = name.trim().length > 0
-    const phoneOk = /^1[3-9]\d{9}$/.test(phone)
+    const phoneOk = /^(1[3-9]\d{9}|0\d{9,10})$/.test(phone)
     if (nameOk && phoneOk) inputStatusVal.value = 'valid'
     else inputStatusVal.value = 'invalid'
   }
@@ -84,7 +113,7 @@ const updateStatus = () => {
   }
   else if (phoneInputted && !nameInputted) {
     // 只有电话，电话有效即可
-    if (/^1[3-9]\d{9}$/.test(phone)) inputStatusVal.value = 'valid'
+    if (/^(1[3-9]\d{9}|0\d{9,10})$/.test(phone)) inputStatusVal.value = 'valid'
     else inputStatusVal.value = 'invalid'
   }
 }
@@ -96,7 +125,7 @@ const statusText = computed(() => {
   const nameInputted = name && name.trim().length > 0
   const phoneInputted = phone && phone.trim().length > 0
   const nameOk = name && name.trim().length > 0
-  const phoneOk = phone && /^1[3-9]\d{9}$/.test(phone)
+  const phoneOk = phone && /^(1[3-9]\d{9}|0\d{9,10})$/.test(phone)
   
   if (nameInputted && phoneInputted) {
     if (nameOk && phoneOk) return '✓ 姓名和手机号都有效，可以签到'
@@ -112,7 +141,7 @@ const statusText = computed(() => {
   
   if (phoneInputted && !nameInputted) {
     if (phoneOk) return '✓ 手机号有效，可以签到'
-    return '✗ 手机号格式错误（格式：13-19开头的11位数字）'
+    return '✗ 手机号格式错误（中国：13-19开头11位；日本：0开头10-11位）'
   }
   
   return '请输入姓名或手机号（至少选一个）'
@@ -183,8 +212,8 @@ const onSubmit = () => {
     return
   }
   
-  if (phoneInputted && !/^1[3-9]\d{9}$/.test(phone)) {
-    ElMessage.warning('手机号格式不正确（11位数字，开头13-19）')
+  if (phoneInputted && !/^(1[3-9]\d{9}|0\d{9,10})$/.test(phone)) {
+    ElMessage.warning('手机号格式不正确（中国：11位，开头13-19；日本：10-11位，开头0）')
     return
   }
   
@@ -207,7 +236,12 @@ const onSubmit = () => {
     })
     .catch(e => {
       const resp = e?.response?.data
-      if (resp?.code === 'NOT_MATCH') {
+      if (resp?.code === 'MULTIPLE_EMPLOYEES') {
+        // 多个员工匹配
+        multipleEmployees.value = resp.employees || []
+        selectedPhoneForMultiple.value = form.value.phone.trim()
+        showSelectDialog.value = true
+      } else if (resp?.code === 'NOT_MATCH') {
         let errorMsg = '未找到员工'
         if (resp.nameError && resp.phoneError) {
           errorMsg = '姓名和手机号都不匹配'
@@ -237,6 +271,36 @@ const onSubmit = () => {
     })
     .finally(() => (loading.value = false))
 }
+
+const selectEmployee = async (employee) => {
+  try {
+    showSelectDialog.value = false
+    loading.value = true
+    
+    // 使用选中的员工名字重新提交签到
+    const response = await api.post('/api/public/sign', {
+      companyCode: companyCode.value,
+      name: employee.name,
+      phone: selectedPhoneForMultiple.value
+    })
+    
+    ElMessage.success('签到成功')
+    form.value.name = ''
+    form.value.phone = ''
+    inputStatusVal.value = 'empty'
+    multipleEmployees.value = []
+  } catch (e) {
+    const resp = e?.response?.data
+    if (resp?.code === 'SIGNED') {
+      ElMessage.warning('今日已签到')
+    } else {
+      ElMessage.error(resp?.msg || '签到失败')
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
 </script>
 
 <style scoped>
@@ -392,6 +456,88 @@ h2 {
   min-height: 16px;
   word-wrap: break-word;
   padding: 0 8px;
+}
+
+.footer-link {
+  text-align: center;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #ebeef5;
+}
+
+.footer-link a {
+  text-decoration: none;
+  font-size: 13px;
+  transition: all 0.3s ease;
+}
+
+.church-link {
+  display: inline-block;
+  color: #fff;
+  background: linear-gradient(135deg, #f5a623 0%, #ffa500 100%);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 500;
+  box-shadow: 0 2px 12px rgba(245, 166, 35, 0.3);
+}
+
+.church-link:hover {
+  background: linear-gradient(135deg, #ffa500 0%, #ff8c00 100%);
+  box-shadow: 0 4px 20px rgba(245, 166, 35, 0.5);
+  transform: translateY(-2px);
+}
+
+/* 多人选择对话框样式 */
+.select-dialog-hint {
+  margin: 0 0 16px;
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.employee-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.employee-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 12px 16px;
+  background: #f5f7fa;
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.employee-option:hover {
+  background: #e6f7ff;
+  border-color: #409eff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.15);
+  transform: translateX(4px);
+}
+
+.employee-option:active {
+  transform: translateX(2px);
+}
+
+.emp-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.emp-info {
+  font-size: 12px;
+  color: #909399;
 }
 
 /* 超大屏幕 (1200px及以上) */

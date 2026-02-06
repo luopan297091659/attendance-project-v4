@@ -103,7 +103,7 @@ app.get('/api/admin/today', auth, async (req, res) => {
 app.get('/api/admin/employees', auth, async (req, res) => {
   try {
     const cid = req.user.companyId;
-    const [rows] = await db.query('SELECT id,name,gender,age,phone,address FROM employees WHERE company_id=?', [cid]);
+    const [rows] = await db.query('SELECT id,name,gender,age,phone,address,remark FROM employees WHERE company_id=?', [cid]);
     res.send(rows);
   } catch (err) {
     console.error('Employees list error:', err.message);
@@ -114,8 +114,8 @@ app.get('/api/admin/employees', auth, async (req, res) => {
 app.post('/api/admin/employees', auth, async (req, res) => {
   try {
     const cid = req.user.companyId;
-    const { name, gender, age, phone, address } = req.body;
-    await db.query('INSERT INTO employees (company_id,name,gender,age,phone,address) VALUES (?,?,?,?,?,?)', [cid, name, gender, age, phone, address]);
+    const { name, gender, age, phone, address, remark } = req.body;
+    await db.query('INSERT INTO employees (company_id,name,gender,age,phone,address,remark) VALUES (?,?,?,?,?,?,?)', [cid, name, gender, age, phone, address, remark || null]);
     res.send({ success:true });
   } catch (err) {
     console.error('Create employee error:', err.message);
@@ -127,8 +127,8 @@ app.put('/api/admin/employees/:id', auth, async (req, res) => {
   try {
     const cid = req.user.companyId;
     const id = req.params.id;
-    const { name, gender, age, phone, address } = req.body;
-    await db.query('UPDATE employees SET name=?,gender=?,age=?,phone=?,address=? WHERE id=? AND company_id=?', [name, gender, age, phone, address, id, cid]);
+    const { name, gender, age, phone, address, remark } = req.body;
+    await db.query('UPDATE employees SET name=?,gender=?,age=?,phone=?,address=?,remark=? WHERE id=? AND company_id=?', [name, gender, age, phone, address, remark || null, id, cid]);
     res.send({ success:true });
   } catch (err) {
     console.error('Update employee error:', err.message);
@@ -145,6 +145,52 @@ app.delete('/api/admin/employees/:id', auth, async (req, res) => {
   } catch (err) {
     console.error('Delete employee error:', err.message);
     res.status(500).send({ msg:'delete failed' });
+  }
+});
+
+// Admin sign-in for employee (代签到)
+app.post('/api/admin/sign-for-employee/:employeeId', auth, async (req, res) => {
+  try {
+    const cid = req.user.companyId;
+    const employeeId = req.params.employeeId;
+    
+    // 验证员工是否属于当前教会
+    const [employee] = await db.query(
+      'SELECT id, name FROM employees WHERE id=? AND company_id=?',
+      [employeeId, cid]
+    );
+    
+    if (!employee.length) {
+      return res.status(404).send({ msg: '员工不存在' });
+    }
+    
+    // 检查该员工今天是否已签到
+    const today = dayjs().format('YYYY-MM-DD');
+    const [existingSign] = await db.query(
+      'SELECT id FROM attendance WHERE employee_id=? AND sign_date=? AND company_id=?',
+      [employeeId, today, cid]
+    );
+    
+    if (existingSign.length) {
+      return res.status(400).send({ code: 'SIGNED', msg: '今日已签到' });
+    }
+    
+    // 执行签到
+    const signTime = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    await db.query(
+      'INSERT INTO attendance (employee_id, company_id, sign_date, sign_time, sign_ip) VALUES (?,?,?,?,?)',
+      [employeeId, cid, today, signTime, 'admin-sign']
+    );
+    
+    res.send({ 
+      success: true, 
+      msg: '签到成功',
+      employeeName: employee[0].name,
+      signTime 
+    });
+  } catch (err) {
+    console.error('Admin sign for employee error:', err && err.stack ? err.stack : err);
+    res.status(500).send({ msg: '签到失败' });
   }
 });
 
@@ -199,11 +245,20 @@ app.post('/api/public/sign', async (req, res) => {
     } else if (phoneInputted && !nameInputted) {
       // Only phone provided
       const [rows] = await db.query(
-        'SELECT * FROM employees WHERE company_id=? AND phone=?',
+        'SELECT id,name,phone,gender,age FROM employees WHERE company_id=? AND phone=?',
         [cid, phone.trim()]
       );
       emp = rows;
-      if (!emp.length) errorInfo.phoneError = true;
+      if (!emp.length) {
+        errorInfo.phoneError = true;
+      } else if (emp.length > 1) {
+        // Multiple employees with same phone - ask user to select
+        return res.status(400).send({
+          code: 'MULTIPLE_EMPLOYEES',
+          employees: emp,
+          msg: '该手机号对应多个员工，请选择具体的人员'
+        });
+      }
     }
 
     if (!emp.length) {
@@ -250,21 +305,15 @@ app.post('/api/public/register', async (req, res) => {
     if (age !== undefined && age !== null && age !== '') {
       if (isNaN(age) || age < 5 || age > 100) return res.status(400).send({ msg:'年龄应在5-100岁之间' });
     }
-    if (!phone || !/^(\+\d{1,4})?((1[3-9]\d{9})|(0?[7-9]\d{9})|([2-9]\d{7,14}))$/.test(phone)) return res.status(400).send({ msg:'手机号格式错误' });
+    // 支持中国手机号（1开头，11位）和日本手机号（0开头，10-11位）
+    if (!phone || !/^(1[3-9]\d{9}|0\d{9,10})$/.test(phone)) return res.status(400).send({ msg:'手机号格式错误' });
 
     // 查询公司
     const [companies] = await db.query('SELECT * FROM companies WHERE code=?', [companyCode]);
     if (!companies.length) return res.status(400).send({ msg:'公司代码无效' });
     const company = companies[0];
 
-    // 检查手机号是否已存在
-    const [existing] = await db.query(
-      'SELECT id FROM employees WHERE company_id=? AND phone=?',
-      [company.id, phone]
-    );
-    if (existing.length) return res.status(400).send({ msg:'该手机号已被注册' });
-
-    // 插入新员工（将可选字段设为 NULL 或 空字符串）
+    // 直接插入新员工（完全允许同一手机号对应多个人员）
     const result = await db.query(
       'INSERT INTO employees (company_id,name,gender,age,phone,address) VALUES (?,?,?,?,?,?)',
       [company.id, name.trim(), gender || null, (age !== undefined && age !== null && age !== '') ? age : null, phone, address || '']
@@ -314,18 +363,37 @@ app.get('/api/admin/stats', auth, async (req, res) => {
   try {
     const cid = req.user.companyId;
     const today = dayjs().format('YYYY-MM-DD');
+    
+    // 获取查询参数中的时间范围（可选）
+    const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
 
     const [[{ total }]] = await db.query('SELECT COUNT(*) as total FROM employees WHERE company_id=?', [cid]);
     const [[{ signed }]] = await db.query('SELECT COUNT(*) as signed FROM attendance WHERE company_id=? AND sign_date=?', [cid, today]);
     const absent = total - signed;
 
-    // 获取最后 7 天的数据
-    const days = [];
-    const dayLabels = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = dayjs().subtract(i, 'day');
-      days.push(d.format('YYYY-MM-DD'));
-      dayLabels.push(d.format('MM-DD'));
+    // 确定时间范围
+    let days = [];
+    let dayLabels = [];
+    
+    if (startDate && endDate) {
+      // 使用提供的时间范围
+      const start = dayjs(startDate);
+      const end = dayjs(endDate);
+      const diff = end.diff(start, 'day');
+      
+      for (let i = 0; i <= diff; i++) {
+        const d = start.add(i, 'day');
+        days.push(d.format('YYYY-MM-DD'));
+        dayLabels.push(d.format('MM-DD'));
+      }
+    } else {
+      // 默认显示最后 7 天的数据
+      for (let i = 6; i >= 0; i--) {
+        const d = dayjs().subtract(i, 'day');
+        days.push(d.format('YYYY-MM-DD'));
+        dayLabels.push(d.format('MM-DD'));
+      }
     }
 
     const placeholders = days.map(() => '?').join(',');

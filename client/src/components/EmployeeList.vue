@@ -17,8 +17,28 @@
       <el-table-column prop="age" label="年龄" min-width="60" align="center"/>
       <el-table-column prop="phone" label="手机号" min-width="110"/>
       <el-table-column prop="address" label="住址" min-width="150" show-overflow-tooltip/>
-      <el-table-column label="操作" min-width="120" align="center" fixed="right">
+      <el-table-column label="备注" min-width="150">
         <template #default="{row}">
+          <div v-if="editingRemarkId === row.id" class="remark-edit-cell">
+            <el-input 
+              v-model="editingRemarkValue"
+              ref="remarkInput"
+              size="small"
+              @blur="saveRemark(row)"
+              @keyup.enter="saveRemark(row)"
+              @keyup.esc="cancelEditRemark"
+              placeholder="请输入备注"
+            />
+          </div>
+          <div v-else class="remark-display-cell" @click="startEditRemark(row)">
+            <span v-if="row.remark" class="remark-text">{{ row.remark }}</span>
+            <span v-else class="remark-placeholder">点击添加备注</span>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" min-width="180" align="center" fixed="right">
+        <template #default="{row}">
+          <el-button type="success" size="small" text @click="signForEmployee(row)">签到</el-button>
           <el-button type="primary" size="small" text @click="openForm(row)">编辑</el-button>
           <el-popconfirm title="确认删除此员工?" @confirm="remove(row.id)">
             <template #reference>
@@ -47,7 +67,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import api from '../api'
 import EmployeeForm from './EmployeeForm.vue'
 import { ElMessage } from 'element-plus'
@@ -60,6 +80,9 @@ const query = ref('')
 const page = ref(1)
 const pageSize = ref(10)
 const loading = ref(false)
+const editingRemarkId = ref(null)
+const editingRemarkValue = ref('')
+const remarkInput = ref(null)
 
 const filtered = computed(() =>
   employees.value.filter(e =>
@@ -91,7 +114,7 @@ const fetch = async () => {
 }
 
 const openForm = (row) => {
-  formModel.value = row ? { ...row } : { name: '', gender: '', age: null, phone: '', address: '' }
+  formModel.value = row ? { ...row } : { name: '', gender: '', age: null, phone: '', address: '', remark: '' }
   showForm.value = true
 }
 
@@ -105,9 +128,68 @@ const remove = async (id) => {
   }
 }
 
+const signForEmployee = async (employee) => {
+  try {
+    const { data } = await api.post(`/api/admin/sign-for-employee/${employee.id}`)
+    ElMessage.success(`${employee.name} 签到成功`)
+    // 刷新列表以更新状态（如果需要显示签到状态）
+    fetch()
+  } catch (e) {
+    if (e.response?.data?.code === 'SIGNED') {
+      ElMessage.warning(`${employee.name} 今日已签到`)
+    } else {
+      ElMessage.error(e.response?.data?.msg || '签到失败')
+    }
+  }
+}
+
 const refresh = () => {
   showForm.value = false
   fetch()
+}
+
+// 备注编辑功能
+const startEditRemark = async (row) => {
+  editingRemarkId.value = row.id
+  editingRemarkValue.value = row.remark || ''
+  await nextTick()
+  if (remarkInput.value) {
+    remarkInput.value.focus()
+  }
+}
+
+const cancelEditRemark = () => {
+  editingRemarkId.value = null
+  editingRemarkValue.value = ''
+}
+
+const saveRemark = async (row) => {
+  if (editingRemarkId.value !== row.id) return
+  
+  const newRemark = editingRemarkValue.value.trim()
+  const oldRemark = row.remark || ''
+  
+  // 如果备注没有变化，直接取消编辑
+  if (newRemark === oldRemark) {
+    cancelEditRemark()
+    return
+  }
+  
+  try {
+    // 调用后端API更新员工信息
+    await api.put(`/api/admin/employees/${row.id}`, {
+      ...row,
+      remark: newRemark
+    })
+    
+    // 更新本地数据
+    row.remark = newRemark
+    ElMessage.success('备注已保存')
+    cancelEditRemark()
+  } catch (e) {
+    ElMessage.error(e.response?.data?.msg || '保存备注失败')
+    console.error('Save remark error:', e)
+  }
 }
 
 const exportCsv = () => {
@@ -285,5 +367,38 @@ onMounted(fetch)
   :deep(.el-table__body td) {
     padding: 8px 4px;
   }
+}
+
+/* 备注编辑样式 */
+.remark-display-cell {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+}
+
+.remark-display-cell:hover {
+  background-color: #f5f7fa;
+}
+
+.remark-text {
+  color: #606266;
+  word-break: break-word;
+}
+
+.remark-placeholder {
+  color: #c0c4cc;
+  font-style: italic;
+}
+
+.remark-edit-cell {
+  width: 100%;
+}
+
+.remark-edit-cell :deep(.el-input__wrapper) {
+  padding: 4px 8px;
 }
 </style>
