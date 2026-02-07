@@ -1,0 +1,66 @@
+<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 金黄色渐变（火焰） -->
+    <linearGradient id="flameGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f4b81b;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#e8a01a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d98b19;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 阴影效果 -->
+    <filter id="shadow">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  
+  <!-- === 大火焰组（左上） === -->
+  <g id="flames-large">
+    <!-- 火焰1 - 最左 -->
+    <path d="M 120 80 Q 90 140 100 210 Q 120 280 165 340 Q 190 280 175 210 Q 165 140 120 80 Z" 
+          fill="url(#flameGradient)" filter="url(#shadow)"/>
+    
+    <!-- 火焰2 - 中间 -->
+    <path d="M 190 60 Q 165 125 180 200 Q 205 270 255 330 Q 280 270 265 200 Q 250 125 190 60 Z" 
+          fill="url(#flameGradient)" filter="url(#shadow)"/>
+    
+    <!-- 火焰3 - 右 -->
+    <path d="M 260 100 Q 240 160 255 225 Q 280 285 320 345 Q 345 285 330 225 Q 315 160 260 100 Z" 
+          fill="url(#flameGradient)" filter="url(#shadow)"/>
+  </g>
+  
+  <!-- === 小火焰组（右下） === -->
+  <g id="flames-small">
+    <!-- 小火焰1 -->
+    <path d="M 290 170 Q 275 210 288 270 Q 310 330 345 380 Q 365 330 353 270 Q 340 210 290 170 Z" 
+          fill="url(#flameGradient)" filter="url(#shadow)"/>
+    
+    <!-- 小火焰2 -->
+    <path d="M 350 190 Q 338 230 352 290 Q 373 350 405 400 Q 425 350 413 290 Q 399 230 350 190 Z" 
+          fill="url(#flameGradient)" filter="url(#shadow)"/>
+  </g>
+  
+  <!-- === 打开的书（深绿色黑色） === -->
+  <g id="book" filter="url(#shadow)">
+    <!-- 左页 -->
+    <path d="M 30 360 L 130 350 Q 165 365 185 415 L 70 450 Q 20 420 30 360 Z" 
+          fill="#0d3d0d" stroke="none"/>
+    
+    <!-- 右页 -->
+    <path d="M 370 360 L 270 350 Q 235 365 215 415 L 330 450 Q 380 420 370 360 Z" 
+          fill="#1a3a1a" stroke="none"/>
+    
+    <!-- 书脊（中间装饰线） -->
+    <ellipse cx="200" cy="360" rx="10" ry="55" fill="#09290d" opacity="0.9"/>
+    
+    <!-- 书的上边沿 -->
+    <path d="M 30 360 Q 200 345 370 360" 
+          stroke="#2d5d2d" stroke-width="2" fill="none" opacity="0.5"/>
+  </g>
+  
+  <!-- === 装饰小元素（火焰与书的连接） === -->
+  <g id="decorations">
+    <!-- 小金色方块 -->
+    <rect x="235" y="335" width="8" height="8" fill="url(#flameGradient)" opacity="0.9"/>
+    <rect x="210" y="340" width="6" height="6" fill="url(#flameGradient)" opacity="0.7"/>
+  </g>
+</svg>

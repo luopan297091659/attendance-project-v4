@@ -106,6 +106,8 @@
       </template>
     </el-dialog>
 
+
+
     <!-- 选项卡 -->
     <el-tabs v-model="activeTab" class="dashboard-tabs">
       <el-tab-pane name="today">
@@ -157,30 +159,61 @@
                 <el-empty description="暂无签到记录" />
               </div>
               
-              <el-table v-else :data="filteredSigned" style="width: 100%" stripe>
-                <el-table-column prop="name" label="姓名" width="100"/>
-                <el-table-column prop="gender" label="性别" width="60" align="center"/>
-                <el-table-column prop="age" label="年龄" width="60" align="center"/>
-                <el-table-column prop="phone" label="手机号" width="130"/>
-                <el-table-column prop="address" label="住址" show-overflow-tooltip/>
-                <el-table-column label="签到时间" width="100">
-                  <template #default="{ row }">
-                    <span class="sign-time">{{ formatTime(row.signTime) }}</span>
-                  </template>
-                </el-table-column>
-              </el-table>
+              <div v-else>
+                <el-table :data="paginatedSigned" style="width: 100%" stripe>
+                  <el-table-column prop="name" label="姓名" width="100"/>
+                  <el-table-column prop="gender" label="性别" width="60" align="center"/>
+                  <el-table-column prop="age" label="年龄" width="60" align="center"/>
+                  <el-table-column prop="phone" label="手机号" width="130"/>
+                  <el-table-column prop="address" label="住址" show-overflow-tooltip/>
+                  <el-table-column label="签到时间" width="100">
+                    <template #default="{ row }">
+                      <span class="sign-time">{{ formatTime(row.signTime) }}</span>
+                    </template>
+                  </el-table-column>
+                </el-table>
+                
+                <div class="pagination-container">
+                  <el-pagination
+                    v-model:current-page="currentPage"
+                    v-model:page-size="pageSize"
+                    :page-sizes="[10, 20, 50, 100]"
+                    :total="filteredSigned.length"
+                    layout="total, sizes, prev, pager, next, jumper"
+                    @current-change="handlePageChange"
+                    @size-change="handleSizeChange"
+                  />
+                </div>
+              </div>
             </el-card>
           </el-col>
           
           <el-col :xs="24" :sm="24" :md="10" :lg="10">
             <el-card shadow="hover" class="data-card">
               <template #header>
-                <span class="card-title"><span class="icon-emoji">📈</span> 签到趋势（7 天）</span>
+                <div class="trend-header">
+                  <span class="card-title"><span class="icon-emoji">📈</span> 签到趋势</span>
+                  <div class="trend-controls">
+                    <el-date-picker 
+                      v-model="trendDateRange" 
+                      type="daterange" 
+                      range-separator="到"
+                      start-placeholder="开始日期"
+                      end-placeholder="结束日期"
+                      :editable="true"
+                      size="small"
+                      @change="onTrendDateChange"
+                      style="width: 240px;"
+                    />
+                  </div>
+                </div>
               </template>
-              <div v-if="loading" class="loading-state">
+              <div v-if="loading || trendLoading" class="loading-state">
                 <el-skeleton :rows="5" animated />
               </div>
-              <ECharts v-else :data="trendData" />
+              <div v-else class="card-chart-wrapper">
+                <ECharts :data="trendData" />
+              </div>
             </el-card>
           </el-col>
         </el-row>
@@ -205,8 +238,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import dayjs from 'dayjs'
 import api from '../../api'
 import EmployeeList from '../../components/EmployeeList.vue'
 import ChurchManagement from '../../components/ChurchManagement.vue'
@@ -228,6 +262,8 @@ const total = ref(0)
 const todaySigned = ref(0)
 const trendData = ref({ days: [], series: [] })
 const selectedDate = ref(new Date())
+const trendDateRange = ref([dayjs().subtract(6, 'day').toDate(), dayjs().toDate()])
+const trendLoading = ref(false)
 
 const changePasswordVisible = ref(false)
 const passwordChanging = ref(false)
@@ -247,6 +283,10 @@ const searchKeyword = ref('')
 const isSuper = ref(false)
 const adminUsername = ref('')
 
+// 分页相关
+const currentPage = ref(1)
+const pageSize = ref(10)
+
 // 刷新图标组件（使用 emoji）
 const RefreshIcon = {
   render() {
@@ -262,6 +302,29 @@ const filteredSigned = computed(() => {
     item.name?.toLowerCase().includes(keyword) || 
     item.phone?.includes(keyword)
   )
+})
+
+// 计算属性：分页后的签到列表
+const paginatedSigned = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredSigned.value.slice(start, end)
+})
+
+// 处理页码变化
+const handlePageChange = (page) => {
+  currentPage.value = page
+}
+
+// 处理每页条数变化
+const handleSizeChange = (size) => {
+  pageSize.value = size
+  currentPage.value = 1
+}
+
+// 监听搜索关键字变化，重置页码
+watch(searchKeyword, () => {
+  currentPage.value = 1
 })
 
 // 格式化时间
@@ -522,9 +585,16 @@ const loadSignData = async () => {
 }
 
 // 加载统计卡片和趋势图数据
-const loadStatsData = async () => {
+const loadStatsData = async (startDate = null, endDate = null) => {
   try {
-    const { data: stats } = await api.get('/api/admin/stats')
+    let url = '/api/admin/stats'
+    if (startDate && endDate) {
+      const start = dayjs(startDate).format('YYYY-MM-DD')
+      const end = dayjs(endDate).format('YYYY-MM-DD')
+      url += `?startDate=${start}&endDate=${end}`
+    }
+    
+    const { data: stats } = await api.get(url)
     total.value = stats.totalEmployees
     todaySigned.value = stats.todaySigned
     trendData.value = {
@@ -550,6 +620,16 @@ const loadStats = async () => {
 // 日期改变时只重新加载签到数据
 const onDateChange = () => {
   loadSignData()
+}
+
+// 趋势图时间范围变化
+const onTrendDateChange = () => {
+  if (trendDateRange.value && trendDateRange.value.length === 2) {
+    trendLoading.value = true
+    loadStatsData(trendDateRange.value[0], trendDateRange.value[1]).finally(() => {
+      trendLoading.value = false
+    })
+  }
 }
 
 onMounted(async () => {
@@ -754,6 +834,14 @@ onMounted(async () => {
 .empty-state {
   padding: 40px 20px;
   text-align: center;
+}
+
+/* 分页容器样式 */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  padding: 16px 0;
 }
 
 /* 二维码对话框样式 */
@@ -1131,5 +1219,127 @@ onMounted(async () => {
     font-size: 11px;
     margin: 6px 0 12px;
   }
+}
+
+/* 趋势图头部和控制按钮 */
+.trend-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 12px;
+}
+
+.trend-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.card-chart-wrapper {
+  width: 100%;
+  height: 250px;
+}
+
+/* 全屏趋势图容器 */
+.fullscreen-trend-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  gap: 0;
+  box-sizing: border-box;
+}
+
+.fullscreen-trend-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #ebeef5;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.fullscreen-chart-wrapper {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.fullscreen-chart-wrapper .loading-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trend-info {
+  color: #606266;
+  font-size: 14px;
+  min-width: 300px;
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .trend-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .trend-controls {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .card-chart-wrapper {
+    height: 200px;
+  }
+
+  .fullscreen-trend-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .trend-info {
+    font-size: 12px;
+    min-width: auto;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .card-chart-wrapper {
+    height: 160px;
+  }
+}
+
+/* 全屏对话框样式调整 */
+:deep(.el-dialog--fullscreen) {
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.el-dialog--fullscreen .el-dialog__header) {
+  padding: 10px 16px;
+  border-bottom: 1px solid #ebeef5;
+  flex-shrink: 0;
+}
+
+:deep(.el-dialog--fullscreen .el-dialog__body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  min-height: 0;
 }
 </style>

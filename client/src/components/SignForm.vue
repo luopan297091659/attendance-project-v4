@@ -1,62 +1,114 @@
 <template>
-  <el-card class="box">
-    <!-- h2标题已隐藏 -->
-
-    <!-- 公司选择：允许切换公司或从链接自动预选 -->
-    <div class="company-select-row">
-      <el-select v-model="companyCode" placeholder="请选择公司" filterable clearable @change="onCompanyChange" class="company-select">
-        <el-option v-for="c in companies" :key="c.code" :label="c.name + ' ('+c.code+')'" :value="c.code" />
-      </el-select>
-      <el-button type="text" icon="el-icon-refresh" @click="fetchCompanies" class="refresh-btn">刷新</el-button>
-    </div>
-
-    <div class="form-content">
-      <div class="form-group">
-        <label>姓名（选填）</label>
-        <input 
-          v-model="form.name" 
-          type="text"
-          placeholder="请输入姓名"
-          class="input-field"
-          @input="updateStatus"
-        />
+  <div class="sign-container">
+    <div class="box">
+      <!-- 页面标题 -->
+      <div class="page-header">
+        <h1 class="page-title">📝 签到</h1>
+        <p class="page-subtitle">请选择教会并填写信息</p>
       </div>
 
-      <div class="form-group">
-        <label>手机号（选填）</label>
-        <input 
-          v-model="form.phone" 
-          type="text"
-          placeholder="请输入手机号"
-          class="input-field"
-          @input="updateStatus"
-        />
+      <!-- 公司选择：允许切换公司或从链接自动预选 -->
+      <div class="company-select-row">
+        <div class="select-wrapper">
+          <label class="select-label">⛪ 选择教会</label>
+          <el-select 
+            v-model="companyCode" 
+            placeholder="请选择教会" 
+            filterable 
+            clearable 
+            @change="onCompanyChange" 
+            class="company-select"
+            size="large"
+          >
+            <el-option v-for="c in companies" :key="c.code" :label="c.name + ' ('+c.code+')'" :value="c.code" />
+          </el-select>
+        </div>
+        <el-button 
+          @click="fetchCompanies" 
+          class="refresh-btn" 
+          circle
+          size="large"
+          :loading="companyLoading"
+        >
+          🔄
+        </el-button>
       </div>
 
-      <button @click="onSubmit" :disabled="loading || !companyCode || inputStatus === 'invalid'" class="submit-btn">
-        <span v-if="inputStatus === 'valid'" class="status-light valid"></span>
-        <span v-else-if="inputStatus === 'invalid'" class="status-light invalid"></span>
-        <span v-else class="status-light empty"></span>
-        {{ loading ? '签到中...' : (!companyCode ? '缺少公司信息' : '签到') }}
-      </button>
-    </div>
+      <div class="form-content">
+        <div class="form-group">
+          <label class="field-label">
+            <span class="label-icon">👤</span>
+            <span>姓名</span>
+            <span class="optional-tag">选填</span>
+          </label>
+          <div class="input-wrapper">
+            <input 
+              v-model="form.name" 
+              type="text"
+              placeholder="请输入姓名"
+              class="input-field"
+              @input="updateStatus"
+            />
+            <span v-if="form.name" class="clear-btn" @click="form.name = ''; updateStatus()">✕</span>
+          </div>
+        </div>
 
-    <div class="tip">{{ statusText }}</div>
+        <div class="form-group">
+          <label class="field-label">
+            <span class="label-icon">📱</span>
+            <span>手机号</span>
+            <span class="optional-tag">选填</span>
+          </label>
+          <div class="input-wrapper">
+            <input 
+              v-model="form.phone" 
+              type="tel"
+              placeholder="请输入手机号"
+              class="input-field"
+              @input="updateStatus"
+            />
+            <span v-if="form.phone" class="clear-btn" @click="form.phone = ''; updateStatus()">✕</span>
+          </div>
+        </div>
 
-    <div class="footer-link">
-      <a href="https://adventist.jp/author/commu/" target="_blank" class="church-link">⛪ 大阪中心教会网页</a>
+        <button 
+          @click="onSubmit" 
+          :disabled="loading || !companyCode || inputStatus === 'invalid'" 
+          class="submit-btn"
+          :class="{ 'loading': loading }"
+        >
+          <span v-if="loading" class="loading-spinner">⏳</span>
+          <span v-else-if="inputStatus === 'valid'" class="status-icon">✓</span>
+          <span v-else-if="inputStatus === 'invalid'" class="status-icon invalid">✗</span>
+          <span v-else class="status-icon">●</span>
+          <span class="btn-text">{{ loading ? '签到中...' : (!companyCode ? '请先选择教会' : '签到') }}</span>
+        </button>
+      </div>
+
+      <div class="tip" :class="{ 'valid': inputStatus === 'valid', 'invalid': inputStatus === 'invalid' }">
+        {{ statusText }}
+      </div>
+
+      <div class="footer-link">
+        <a href="https://adventist.jp/author/commu/" target="_blank" class="church-link">
+          <span class="link-icon">⛪</span>
+          <span>大阪中心教会网页</span>
+        </a>
+      </div>
     </div>
-  </el-card>
+  </div>
 
   <!-- 多人选择对话框 -->
   <el-dialog 
     v-model="showSelectDialog" 
-    title="请选择具体人员"
-    width="400px"
+    title="📋 请选择具体人员"
+    width="90%"
     :close-on-click-modal="false"
     :close-on-press-escape="false"
+    class="select-dialog"
+    align-center
   >
-    <p class="select-dialog-hint">该手机号对应多个员工，请选择要签到的人员：</p>
+    <p class="select-dialog-hint">该手机号对应多个成员，请选择要签到的人员：</p>
     <div class="employee-list">
       <button 
         v-for="emp in multipleEmployees" 
@@ -64,7 +116,10 @@
         @click="selectEmployee(emp)"
         class="employee-option"
       >
-        <span class="emp-name">{{ emp.name }}</span>
+        <div class="emp-header">
+          <span class="emp-avatar">👤</span>
+          <span class="emp-name">{{ emp.name }}</span>
+        </div>
         <span class="emp-info">{{ emp.gender ? emp.gender + ' · ' : '' }}{{ emp.age ? emp.age + '岁' : '' }}</span>
       </button>
     </div>
@@ -78,6 +133,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 
 const form = ref({ name: '', phone: '' })
 const loading = ref(false)
+const companyLoading = ref(false)
 const inputStatusVal = ref('empty')
 const showSelectDialog = ref(false)
 const multipleEmployees = ref([])
@@ -149,6 +205,7 @@ const statusText = computed(() => {
 
 const fetchCompanies = async (q = '') => {
   try {
+    companyLoading.value = true
     const { data } = await api.get('/api/public/companies', { params: { q } })
     companies.value = data
     if (companyCode.value) {
@@ -167,7 +224,9 @@ const fetchCompanies = async (q = '') => {
     }
   } catch (err) {
     console.error('fetchCompanies failed', err)
-    ElMessage.error('获取公司列表失败')
+    ElMessage.error('获取教会列表失败')
+  } finally {
+    companyLoading.value = false
   }
 }
 
@@ -304,18 +363,84 @@ const selectEmployee = async (employee) => {
 </script>
 
 <style scoped>
-.box {
-  max-width: 500px;
-  margin: 40px auto;
+.sign-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 20px;
-  border-radius: 8px;
+}
+
+.box {
+  width: 100%;
+  max-width: 500px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: 32px 24px;
   box-sizing: border-box;
 }
 
-h2 {
+.page-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #2c3e50;
+  letter-spacing: -0.5px;
+}
+
+.page-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #7f8c8d;
+  font-weight: 400;
+}
+
+.company-select-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 24px;
+}
+
+.select-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.select-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  display: block;
+}
+
+.company-select {
+  width: 100%;
+}
+
+.refresh-btn {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
   font-size: 20px;
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.refresh-btn:hover {
+  background: #409eff;
+  border-color: #409eff;
+  transform: rotate(180deg);
 }
 
 .form-content {
@@ -326,171 +451,242 @@ h2 {
   margin-bottom: 20px;
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #333;
-  word-break: break-word;
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 15px;
+}
+
+.label-icon {
+  font-size: 18px;
+}
+
+.optional-tag {
+  font-size: 11px;
+  color: #95a5a6;
+  font-weight: 400;
+  background: #ecf0f1;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: auto;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .input-field {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  font-size: 14px;
-  transition: border-color 0.3s, box-shadow 0.3s;
+  padding: 14px 40px 14px 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  font-size: 16px;
+  transition: all 0.3s ease;
   box-sizing: border-box;
-  -webkit-appearance: none;
-  appearance: none;
+  background: #f8f9fa;
+  color: #2c3e50;
+  font-weight: 500;
 }
 
 .input-field:focus {
   outline: none;
-  border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+  border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
 }
 
 .input-field::placeholder {
-  color: #a8abb2;
+  color: #adb5bd;
+  font-weight: 400;
+}
+
+.clear-btn {
+  position: absolute;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #dee2e6;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.clear-btn:hover {
+  background: #adb5bd;
+  color: white;
+}
+
+.clear-btn:active {
+  transform: scale(0.9);
 }
 
 .submit-btn {
   width: 100%;
-  padding: 12px;
-  background-color: #409eff;
+  padding: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 4px;
-  font-size: 16px;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   box-sizing: border-box;
-  font-weight: 500;
-  -webkit-appearance: none;
-  appearance: none;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  margin-top: 8px;
 }
 
 .submit-btn:hover:not(:disabled) {
-  background-color: #66b1ff;
-}
-
-.submit-btn:disabled {
-  background-color: #a8abb2;
-  cursor: not-allowed;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
 }
 
 .submit-btn:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: translateY(0);
 }
 
-.status-light {
+.submit-btn:disabled {
+  background: linear-gradient(135deg, #adb5bd 0%, #95a5a6 100%);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.submit-btn.loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.loading-spinner {
   display: inline-block;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  animation: pulse 2s infinite;
-  vertical-align: middle;
-  flex-shrink: 0;
+  font-size: 20px;
+  animation: spin 1s linear infinite;
 }
 
-.status-light.valid {
-  background-color: #67c23a;
-  box-shadow: 0 0 8px rgba(103, 194, 58, 0.6);
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-.status-light.invalid {
-  background-color: #f56c6c;
-  box-shadow: 0 0 8px rgba(245, 108, 108, 0.6);
-}
-
-.status-light.empty {
-  background-color: #909399;
-  opacity: 0.5;
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-.company-select-row {
-  display: flex;
-  gap: 12px;
+.status-icon {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  font-size: 12px;
+  font-weight: bold;
 }
 
-.company-select {
-  min-width: 260px;
-  max-width: 420px;
-  flex: 1;
+.status-icon.invalid {
+  background: rgba(231, 76, 60, 0.3);
 }
 
-.refresh-btn {
-  color: #409eff;
-  flex-shrink: 0;
-  white-space: nowrap;
+.btn-text {
+  font-size: 16px;
 }
 
 .tip {
   text-align: center;
-  color: #606266;
-  font-size: 12px;
-  margin-top: 12px;
-  height: 16px;
-  min-height: 16px;
-  word-wrap: break-word;
-  padding: 0 8px;
+  font-size: 13px;
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f8f9fa;
+  color: #6c757d;
+  line-height: 1.5;
+  min-height: 20px;
+  transition: all 0.3s ease;
+}
+
+.tip.valid {
+  background: #d1f2eb;
+  color: #0a6847;
+  font-weight: 500;
+}
+
+.tip.invalid {
+  background: #f8d7da;
+  color: #c92a3a;
+  font-weight: 500;
 }
 
 .footer-link {
   text-align: center;
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px solid #ebeef5;
-}
-
-.footer-link a {
-  text-decoration: none;
-  font-size: 13px;
-  transition: all 0.3s ease;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 2px solid #f1f3f5;
 }
 
 .church-link {
-  display: inline-block;
-  color: #fff;
-  background: linear-gradient(135deg, #f5a623 0%, #ffa500 100%);
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-weight: 500;
-  box-shadow: 0 2px 12px rgba(245, 166, 35, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: white;
+  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+  padding: 12px 24px;
+  border-radius: 25px;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+  transition: all 0.3s ease;
 }
 
 .church-link:hover {
-  background: linear-gradient(135deg, #ffa500 0%, #ff8c00 100%);
-  box-shadow: 0 4px 20px rgba(245, 166, 35, 0.5);
   transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(243, 156, 18, 0.5);
+}
+
+.church-link:active {
+  transform: translateY(0);
+}
+
+.link-icon {
+  font-size: 16px;
 }
 
 /* 多人选择对话框样式 */
+.select-dialog :deep(.el-dialog) {
+  border-radius: 16px;
+  max-width: 450px;
+}
+
+.select-dialog :deep(.el-dialog__header) {
+  padding: 20px 24px 16px;
+  border-bottom: 2px solid #f1f3f5;
+}
+
+.select-dialog :deep(.el-dialog__title) {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.select-dialog :deep(.el-dialog__body) {
+  padding: 20px 24px;
+}
+
 .select-dialog-hint {
   margin: 0 0 16px;
-  color: #606266;
+  color: #6c757d;
   font-size: 14px;
   line-height: 1.6;
 }
@@ -498,359 +694,336 @@ h2 {
 .employee-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .employee-option {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 12px 16px;
-  background: #f5f7fa;
-  border: 1px solid #dcdfe6;
-  border-radius: 6px;
+  padding: 16px;
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
   text-align: left;
   font-family: inherit;
-  -webkit-appearance: none;
-  appearance: none;
+  gap: 8px;
 }
 
 .employee-option:hover {
-  background: #e6f7ff;
-  border-color: #409eff;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.15);
+  background: #e7f3ff;
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
   transform: translateX(4px);
 }
 
 .employee-option:active {
-  transform: translateX(2px);
+  transform: scale(0.98);
+}
+
+.emp-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.emp-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
 }
 
 .emp-name {
-  font-weight: 600;
-  font-size: 15px;
-  color: #303133;
-  margin-bottom: 4px;
+  font-weight: 700;
+  font-size: 16px;
+  color: #2c3e50;
+  flex: 1;
 }
 
 .emp-info {
-  font-size: 12px;
-  color: #909399;
+  font-size: 13px;
+  color: #6c757d;
+  padding-left: 46px;
 }
 
-/* 超大屏幕 (1200px及以上) */
-@media (min-width: 1200px) {
-  .box {
-    max-width: 600px;
-    margin: 60px auto;
-    padding: 30px;
+/* 响应式设计 */
+
+/* 平板设备 (768px - 1023px) */
+@media (max-width: 1023px) and (min-width: 768px) {
+  .sign-container {
+    padding: 16px;
   }
 
-  .form-group {
-    margin-bottom: 24px;
+  .box {
+    padding: 28px 20px;
+  }
+
+  .page-title {
+    font-size: 24px;
+  }
+}
+
+/* 手机设备 (max-width: 767px) */
+@media (max-width: 767px) {
+  .sign-container {
+    padding: 0;
+    background: white;
+    align-items: flex-start;
+  }
+
+  .box {
+    max-width: 100%;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 24px 20px;
+    min-height: 100vh;
+  }
+
+  .page-header {
+    margin-bottom: 20px;
+  }
+
+  .page-title {
+    font-size: 24px;
+  }
+
+  .page-subtitle {
+    font-size: 13px;
+  }
+
+  .company-select-row {
+    margin-bottom: 20px;
+    gap: 10px;
+  }
+
+  .select-label {
+    font-size: 13px;
+  }
+
+  .refresh-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .field-label {
+    font-size: 14px;
+  }
+
+  .label-icon {
+    font-size: 16px;
+  }
+
+  .optional-tag {
+    font-size: 10px;
   }
 
   .input-field {
-    padding: 12px 14px;
-    font-size: 15px;
+    padding: 12px 36px 12px 14px;
+    font-size: 16px;
+    border-radius: 10px;
+  }
+
+  .clear-btn {
+    right: 10px;
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
   }
 
   .submit-btn {
     padding: 14px;
-    font-size: 17px;
-  }
-}
-
-/* 大屏幕 (768px - 1199px) */
-@media (min-width: 768px) and (max-width: 1199px) {
-  .box {
-    max-width: 480px;
-    margin: 30px auto;
-    padding: 20px;
+    font-size: 16px;
+    border-radius: 10px;
   }
 
-  .company-select {
-    min-width: 200px;
-    max-width: 380px;
-  }
-}
-
-/* 平板竖屏 (481px - 767px) */
-@media (min-width: 481px) and (max-width: 767px) {
-  .box {
-    max-width: 95vw;
-    margin: 20px auto;
-    padding: 16px;
-    border-radius: 8px;
+  .btn-text {
+    font-size: 15px;
   }
 
-  .box h2 {
+  .tip {
+    font-size: 12px;
+    padding: 10px;
+  }
+
+  .church-link {
+    font-size: 13px;
+    padding: 10px 20px;
+  }
+
+  /* 对话框样式调整 */
+  .select-dialog :deep(.el-dialog) {
+    width: 95% !important;
+    margin: 0 auto;
+  }
+
+  .emp-avatar {
+    width: 32px;
+    height: 32px;
     font-size: 18px;
-    margin: 0 0 16px 0;
+  }
+
+  .emp-name {
+    font-size: 15px;
+  }
+
+  .emp-info {
+    font-size: 12px;
+    padding-left: 42px;
+  }
+}
+
+/* 小手机设备 (max-width: 375px) */
+@media (max-width: 375px) {
+  .box {
+    padding: 20px 16px;
+  }
+
+  .page-title {
+    font-size: 22px;
+  }
+
+  .page-subtitle {
+    font-size: 12px;
   }
 
   .company-select-row {
-    gap: 10px;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
   }
 
-  .company-select {
-    min-width: 120px;
-    max-width: 100%;
-    flex: 1;
+  .refresh-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
   }
 
   .form-group {
     margin-bottom: 16px;
   }
 
-  .form-group label {
-    font-size: 15px;
-    margin-bottom: 6px;
-  }
-
   .input-field {
-    padding: 9px 11px;
-    font-size: 16px;
-    border-radius: 4px;
+    padding: 11px 34px 11px 12px;
+    font-size: 15px;
   }
 
   .submit-btn {
-    padding: 11px 14px;
+    padding: 13px;
     font-size: 15px;
-    border-radius: 4px;
-  }
-
-  .status-light {
-    width: 10px;
-    height: 10px;
-  }
-
-  .tip {
-    font-size: 12px;
-    margin-top: 10px;
-  }
-
-  .refresh-btn {
-    font-size: 13px;
-  }
-}
-
-/* 手机设备 (max-width: 480px) */
-@media (max-width: 480px) {
-  /* 防止iOS缩放 */
-  input,
-  button,
-  select,
-  textarea {
-    font-size: 16px;
-  }
-
-  .box {
-    max-width: 100vw;
-    width: 100%;
-    margin: 0 auto;
-    padding: 12px;
-    border-radius: 0;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  .box h2 {
-    font-size: 16px;
-    margin: 0 0 12px 0;
-    padding: 0;
-  }
-
-  .company-select-row {
-    gap: 6px;
-    margin-bottom: 12px;
-    padding: 0;
-  }
-
-  .company-select {
-    min-width: unset;
-    max-width: 100%;
-    width: 100%;
-    flex: 1 1 auto;
-  }
-
-  :deep(.el-select) {
-    width: 100%;
-  }
-
-  .refresh-btn {
-    padding: 6px 8px;
-    font-size: 12px;
-    flex-shrink: 1;
-  }
-
-  .form-content {
-    margin: 12px 0;
-    width: 100%;
-  }
-
-  .form-group {
-    margin-bottom: 12px;
-    width: 100%;
-  }
-
-  .form-group label {
-    font-size: 13px;
-    margin-bottom: 4px;
-    font-weight: 600;
-    color: #333;
-  }
-
-  .input-field {
-    padding: 8px 10px;
-    font-size: 16px;
-    border-radius: 4px;
-    border-width: 1px;
-    height: 44px;
-    line-height: 1.2;
-  }
-
-  .input-field:focus {
-    border-color: #409eff;
-    background-color: #f5f7fa;
-  }
-
-  .submit-btn {
-    padding: 10px 12px;
-    font-size: 15px;
-    border-radius: 4px;
-    width: 100%;
-    gap: 6px;
-    height: 44px;
-    margin-top: 8px;
-    font-weight: 600;
-  }
-
-  .submit-btn:active:not(:disabled) {
-    background-color: #398ade;
-  }
-
-  .status-light {
-    width: 8px;
-    height: 8px;
   }
 
   .tip {
     font-size: 11px;
-    margin-top: 8px;
-    padding: 0 4px;
-    line-height: 1.4;
+    padding: 8px;
   }
 
-  /* 超小手机 (max-width: 360px) */
-  @media (max-width: 360px) {
-    .box {
-      padding: 10px;
-      min-height: auto;
-    }
+  .church-link {
+    font-size: 12px;
+    padding: 9px 18px;
+  }
 
-    .box h2 {
-      font-size: 15px;
-      margin: 0 0 10px 0;
-    }
-
-    .company-select-row {
-      gap: 4px;
-      margin-bottom: 10px;
-    }
-
-    .form-group {
-      margin-bottom: 10px;
-    }
-
-    .form-group label {
-      font-size: 12px;
-      margin-bottom: 3px;
-    }
-
-    .input-field {
-      padding: 6px 8px;
-      font-size: 15px;
-      height: 40px;
-    }
-
-    .submit-btn {
-      padding: 8px 10px;
-      font-size: 14px;
-      height: 40px;
-      margin-top: 6px;
-    }
-
-    .tip {
-      font-size: 10px;
-      margin-top: 6px;
-    }
+  .link-icon {
+    font-size: 14px;
   }
 }
 
-/* 横屏手机 (高度限制) */
-@media (max-height: 500px) and (max-width: 767px) {
-  .box {
-    min-height: auto;
-    margin: 10px auto;
-    padding: 10px;
+/* 横屏手机优化 */
+@media (max-height: 600px) and (max-width: 767px) and (orientation: landscape) {
+  .sign-container {
+    align-items: flex-start;
+    padding: 12px;
   }
 
-  .box h2 {
-    margin: 0 0 8px 0;
+  .box {
+    min-height: auto;
+    padding: 16px;
+  }
+
+  .page-header {
+    margin-bottom: 12px;
+  }
+
+  .page-title {
+    font-size: 20px;
+  }
+
+  .page-subtitle {
+    font-size: 11px;
+  }
+
+  .company-select-row {
+    margin-bottom: 12px;
   }
 
   .form-group {
-    margin-bottom: 10px;
-  }
-
-  .form-group label {
-    margin-bottom: 2px;
-    font-size: 12px;
+    margin-bottom: 12px;
   }
 
   .input-field {
-    padding: 6px 8px;
-    font-size: 14px;
-    height: 36px;
+    padding: 10px 32px 10px 12px;
   }
 
   .submit-btn {
-    padding: 6px 10px;
-    font-size: 14px;
-    height: 36px;
+    padding: 11px;
   }
 
   .tip {
-    margin-top: 4px;
-    font-size: 10px;
+    margin-top: 12px;
+    padding: 8px;
+  }
+
+  .footer-link {
+    margin-top: 16px;
+    padding-top: 12px;
   }
 }
 
 /* iOS Safari 特定优化 */
 @supports (-webkit-touch-callout: none) {
-  .input-field {
-    font-size: 16px;
-  }
-
-  .submit-btn {
-    font-size: 16px;
-  }
-
-  body {
-    -webkit-user-select: none;
-    user-select: none;
-  }
-
   .input-field,
   .submit-btn {
-    -webkit-user-select: text;
-    user-select: text;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .input-field:focus {
+    font-size: 16px;
+  }
+}
+
+/* 触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+  .submit-btn:hover {
+    transform: none;
+  }
+
+  .submit-btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  .church-link:hover {
+    transform: none;
+  }
+
+  .church-link:active {
+    transform: scale(0.97);
+  }
+
+  .employee-option:hover {
+    transform: none;
+  }
+
+  .employee-option:active {
+    transform: scale(0.98);
   }
 }
 </style>

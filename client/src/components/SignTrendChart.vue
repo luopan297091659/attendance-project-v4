@@ -3,7 +3,7 @@
 </template>
 
 <script setup>
-import { onMounted, watch, ref } from 'vue'
+import { onMounted, watch, ref, nextTick } from 'vue'
 import * as echarts from 'echarts'
 
 const props = defineProps({ data: Object })
@@ -24,60 +24,44 @@ watch(() => props.data, () => render(), { deep: true })
 function render() {
   if (!inst.value || !props.data || !props.data.days) return
   
-  // 根据窗口大小调整图表选项
-  const isMobile = window.innerWidth <= 480
-  const isTablet = window.innerWidth <= 768
-  
   inst.value.setOption({
     xAxis: {
       type: 'category',
-      data: props.data.days,
-      axisLabel: {
-        fontSize: isMobile ? 10 : isTablet ? 11 : 12
-      }
+      data: props.data.days
     },
     yAxis: {
       type: 'value',
-      minInterval: 1,
-      axisLabel: {
-        fontSize: isMobile ? 10 : isTablet ? 11 : 12
-      }
+      minInterval: 1
     },
     series: [{
       type: 'line',
       data: props.data.series,
       smooth: true,
       itemStyle: { color: '#409EFF' },
-      lineStyle: {
-        width: isMobile ? 1 : 2
-      }
+      lineStyle: { width: 2 }
     }],
     grid: {
-      left: isMobile ? '15%' : isTablet ? '12%' : '10%',
-      right: isMobile ? '8%' : '5%',
-      bottom: isMobile ? '15%' : '10%',
-      top: isMobile ? '8%' : '5%',
+      left: '3%',
+      right: '2%',
+      bottom: '5%',
+      top: '2%',
       containLabel: true
     }
   })
 }
+
+// 暴露resize方法供外部调用
+const doResize = async () => {
+  await nextTick()
+  inst.value?.resize()
+}
+
+defineExpose({ doResize })
 </script>
 
 <style scoped>
 .trend-chart {
   width: 100%;
-  height: 240px;
-}
-
-@media (max-width: 768px) {
-  .trend-chart {
-    height: 200px;
-  }
-}
-
-@media (max-width: 480px) {
-  .trend-chart {
-    height: 160px;
-  }
+  height: 100%;
 }
 </style>

@@ -140,6 +140,8 @@ app.delete('/api/admin/employees/:id', auth, async (req, res) => {
   try {
     const cid = req.user.companyId;
     const id = req.params.id;
+    // 先删除该员工的所有签到记录，再删除员工
+    await db.query('DELETE FROM attendance WHERE employee_id=? AND company_id=?', [id, cid]);
     await db.query('DELETE FROM employees WHERE id=? AND company_id=?', [id, cid]);
     res.send({ success:true });
   } catch (err) {
@@ -369,7 +371,11 @@ app.get('/api/admin/stats', auth, async (req, res) => {
     const endDate = req.query.endDate;
 
     const [[{ total }]] = await db.query('SELECT COUNT(*) as total FROM employees WHERE company_id=?', [cid]);
-    const [[{ signed }]] = await db.query('SELECT COUNT(*) as signed FROM attendance WHERE company_id=? AND sign_date=?', [cid, today]);
+    // 只统计当前活跃员工（未删除）的签到记录
+    const [[{ signed }]] = await db.query(
+      'SELECT COUNT(DISTINCT a.employee_id) as signed FROM attendance a JOIN employees e ON a.employee_id=e.id WHERE a.company_id=? AND a.sign_date=?',
+      [cid, today]
+    );
     const absent = total - signed;
 
     // 确定时间范围
@@ -397,8 +403,9 @@ app.get('/api/admin/stats', auth, async (req, res) => {
     }
 
     const placeholders = days.map(() => '?').join(',');
+    // 只统计当前活跃员工（未删除）的签到记录，排除已删除员工的签到数据
     const [rows] = await db.query(
-      `SELECT sign_date, COUNT(*) as cnt FROM attendance WHERE company_id=? AND sign_date IN (${placeholders}) GROUP BY sign_date`,
+      `SELECT a.sign_date, COUNT(DISTINCT a.employee_id) as cnt FROM attendance a JOIN employees e ON a.employee_id=e.id WHERE a.company_id=? AND a.sign_date IN (${placeholders}) GROUP BY a.sign_date`,
       [cid, ...days]
     );
 
@@ -938,9 +945,89 @@ app.get('*', (req, res) => {
   res.status(404).send({ msg: 'Not found' });
 });
 
-const PORT = process.env.PORT || 8000;
+// Admin: check data integrity (super admin only)
+app.get('/api/admin/check-integrity', auth, async (req, res) => {
+  try {
+    if (!req.user.isSuper) {
+      return res.status(403).send({ msg: '仅超级管理员可访问' });
+    }
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Attendance Server running on http://0.0.0.0:${PORT}`);
+    const [orphaned] = await db.query(`
+      SELECT DISTINCT a.employee_id, COUNT(*) as record_count
+      FROM attendance a
+      WHERE a.employee_id NOT IN (SELECT id FROM employees)
+      GROUP BY a.employee_id
+    `);
+
+    const [duplicates] = await db.query(`
+      SELECT employee_id, sign_date, COUNT(*) as cnt
+      FROM attendance
+      GROUP BY employee_id, sign_date
+      HAVING cnt > 1
+    `);
+
+    res.send({
+      orphanedRecords: orphaned.length > 0 ? orphaned : [],
+      duplicateSignins: duplicates.length > 0 ? duplicates : [],
+      hasIssues: orphaned.length > 0 || duplicates.length > 0,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('Integrity check error:', err.message);
+    res.status(500).send({ msg: '检查失败' });
+  }
+});
+
+// Admin: cleanup orphaned records (super admin only)
+app.post('/api/admin/cleanup-orphaned', auth, async (req, res) => {
+  try {
+    if (!req.user.isSuper) {
+      return res.status(403).send({ msg: '仅超级管理员可访问' });
+    }
+
+    // 获取孤立的签到记录
+    const [orphaned] = await db.query(`
+      SELECT DISTINCT a.employee_id
+      FROM attendance a
+      WHERE a.employee_id NOT IN (SELECT id FROM employees)
+    `);
+
+    if (orphaned.length === 0) {
+      return res.send({ 
+        success: true, 
+        message: '没有孤立记录需要清理',
+        deletedCount: 0 
+      });
+    }
+
+    // 删除孤立的签到记录
+    const orphanedIds = orphaned.map(r => r.employee_id);
+    const placeholders = orphanedIds.map(() => '?').join(',');
+    const result = await db.query(
+      `DELETE FROM attendance WHERE employee_id IN (${placeholders})`,
+      orphanedIds
+    );
+
+    console.log(`Cleaned up ${result[0].affectedRows} orphaned attendance records for ${orphanedIds.length} deleted employees`);
+
+    res.send({
+      success: true,
+      message: '清理完成',
+      deletedEmployeeIds: orphanedIds,
+      recordsDeleted: result[0].affectedRows
+    });
+  } catch (err) {
+    console.error('Cleanup error:', err.message);
+    res.status(500).send({ msg: '清理失败' });
+  }
+});
+
+const PORT = process.env.PORT || 8000;
+const HOST = process.env.HOST || '0.0.0.0';
+
+app.listen(PORT, HOST, () => {
+  console.log(`Attendance Server running on http://${HOST}:${PORT}`);
   console.log('API endpoints ready');
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Frontend hosting: ${FRONTEND_DIR}`);
 });

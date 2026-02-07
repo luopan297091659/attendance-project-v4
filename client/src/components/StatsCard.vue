@@ -7,7 +7,7 @@
           <div class="stat-icon">👥</div>
           <div class="stat-info">
             <div class="stat-number">{{ total }}</div>
-            <div class="stat-label">员工总数</div>
+            <div class="stat-label">人员总数</div>
             <div class="stat-placeholder"></div>
           </div>
         </div>
